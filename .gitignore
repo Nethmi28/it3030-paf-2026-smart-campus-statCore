@@ -1,0 +1,20 @@
+# OS specific files
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# IDE and Editor files
+.vscode/
+.idea/
+.qodo/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+
+# Global ignores for Node and Logs (just in case they run commands at root)
+node_modules/
+*.log
