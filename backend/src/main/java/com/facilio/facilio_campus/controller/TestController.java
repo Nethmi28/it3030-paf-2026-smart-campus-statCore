@@ -21,12 +21,12 @@ public class TestController {
         // Create a test student
         Student testStudent = new Student("Test User", "test@example.com", "Computer Science");
         studentRepository.save(testStudent);
-        
+
         // Retrieve from database
         List<Student> students = studentRepository.findAll();
-        
+
         return "Database Connection Successful! 🎉<br/>" +
-               "Test table 'student' accessed successfully.<br/>" +
-               "Total students in DB right now: " + students.size();
+                "Test table 'student' accessed successfully.<br/>" +
+                "Total students in DB right now: " + students.size();
     }
 }
