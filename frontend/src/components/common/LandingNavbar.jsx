@@ -14,6 +14,8 @@ export default function LandingNavbar() {
     }
   }, []);
 
+
+
   const toggleTheme = () => {
     if (isDark) {
       document.documentElement.classList.remove('dark');
@@ -47,6 +49,7 @@ export default function LandingNavbar() {
         facilio<span style={{ color: 'var(--text-muted)' }}>/campus</span>
       </div>
 
+
       <ul style={{ display: 'flex', gap: '2.5rem', fontWeight: '500', color: 'var(--text-muted)' }}>
         <li><Link style={{ color: 'var(--text-primary)' }} to="/">Home</Link></li>
         <li><Link to="/facilities">Facilities</Link></li>
@@ -54,6 +57,7 @@ export default function LandingNavbar() {
         <li><Link to="/about">About Us</Link></li>
         <li><Link to="/contact">Contacts</Link></li>
       </ul>
+
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <button
@@ -63,6 +67,7 @@ export default function LandingNavbar() {
         >
           {isDark ? <Sun size={22} /> : <Moon size={22} />}
         </button>
+
 
         <Link
           to="/dashboard"
