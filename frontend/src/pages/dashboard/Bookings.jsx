@@ -10,10 +10,10 @@ export default function Bookings() {
           <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '4px' }}>My Bookings</h2>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Manage your facility and resource bookings</div>
         </div>
-        
+
         {/* Sub-component Navigation (Tabs) */}
         <div style={{ display: 'flex', background: 'var(--bg-icon)', padding: '4px', borderRadius: '8px' }}>
-          <button 
+          <button
             onClick={() => setActiveTab('view')}
             style={{
               padding: '8px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer',
@@ -25,8 +25,8 @@ export default function Bookings() {
             }}
           >
             View Bookings
-          </button>
-          <button 
+          </button>d
+          <button
             onClick={() => setActiveTab('create')}
             style={{
               padding: '8px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer',
@@ -41,9 +41,9 @@ export default function Bookings() {
           </button>
         </div>
       </div>
-      
-      <div style={{ 
-        background: 'var(--bg-card)', padding: '48px', borderRadius: '12px', 
+
+      <div style={{
+        background: 'var(--bg-card)', padding: '48px', borderRadius: '12px',
         display: 'flex', justifyContent: 'center', alignItems: 'center',
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', minHeight: '300px'
       }}>
