@@ -1,7 +1,21 @@
 import { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import TicketManagerView from './TicketManagerView';
+import TicketTechnicianView from './TicketTechnicianView';
 
-export default function Tickets() {
+export default function TicketUserView() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('view');
+
+  if (user?.role === 'ROLE_MANAGER') {
+    return <TicketManagerView />;
+  }
+
+  if (user?.role === 'ROLE_TECHNICIAN') {
+    return <TicketTechnicianView />;
+  }
+
+
 
   return (
     <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -10,10 +24,10 @@ export default function Tickets() {
           <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '4px' }}>My Tickets</h2>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Track and manage your service requests</div>
         </div>
-        
+
         {/* Sub-component Navigation (Tabs) */}
         <div style={{ display: 'flex', background: 'var(--bg-icon)', padding: '4px', borderRadius: '8px' }}>
-          <button 
+          <button
             onClick={() => setActiveTab('view')}
             style={{
               padding: '8px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer',
@@ -26,7 +40,7 @@ export default function Tickets() {
           >
             View Tickets
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('create')}
             style={{
               padding: '8px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer',
@@ -41,9 +55,9 @@ export default function Tickets() {
           </button>
         </div>
       </div>
-      
-      <div style={{ 
-        background: 'var(--bg-card)', padding: '48px', borderRadius: '12px', 
+
+      <div style={{
+        background: 'var(--bg-card)', padding: '48px', borderRadius: '12px',
         display: 'flex', justifyContent: 'center', alignItems: 'center',
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', minHeight: '300px'
       }}>
