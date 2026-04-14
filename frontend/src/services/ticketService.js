@@ -39,7 +39,23 @@ const getMyTickets = async () => {
     return response.data;
 };
 
+const getTicketComments = async (ticketId) => {
+    const token = localStorage.getItem('token');
+    const config = { headers: { 'Authorization': `Bearer ${token}` } };
+    const response = await axios.get(`${API_URL}/${ticketId}/comments`, config);
+    return response.data;
+};
+
+const addComment = async (ticketId, content) => {
+    const token = localStorage.getItem('token');
+    const config = { headers: { 'Authorization': `Bearer ${token}` } };
+    const response = await axios.post(`${API_URL}/${ticketId}/comments`, { content }, config);
+    return response.data;
+};
+
 export const ticketService = {
     createTicket,
-    getMyTickets
+    getMyTickets,
+    getTicketComments,
+    addComment
 };

@@ -3,6 +3,7 @@ package com.facilio.facilio_campus.dto;
 import com.facilio.facilio_campus.model.TicketPriority;
 import com.facilio.facilio_campus.model.TicketStatus;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class TicketResponseDTO {
 
@@ -20,6 +21,9 @@ public class TicketResponseDTO {
     private String assignedToName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    private List<String> attachmentNames;
+    private List<Long> attachmentIds;
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -63,4 +67,10 @@ public class TicketResponseDTO {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public List<String> getAttachmentNames() { return attachmentNames; }
+    public void setAttachmentNames(List<String> attachmentNames) { this.attachmentNames = attachmentNames; }
+
+    public List<Long> getAttachmentIds() { return attachmentIds; }
+    public void setAttachmentIds(List<Long> attachmentIds) { this.attachmentIds = attachmentIds; }
 }

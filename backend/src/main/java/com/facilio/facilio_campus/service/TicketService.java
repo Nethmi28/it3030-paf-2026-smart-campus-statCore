@@ -8,6 +8,10 @@ import com.facilio.facilio_campus.model.User;
 import com.facilio.facilio_campus.repository.TicketAttachmentRepository;
 import com.facilio.facilio_campus.repository.TicketRepository;
 import com.facilio.facilio_campus.repository.UserRepository;
+import com.facilio.facilio_campus.repository.CommentRepository;
+import com.facilio.facilio_campus.model.Comment;
+import com.facilio.facilio_campus.dto.CommentRequestDTO;
+import com.facilio.facilio_campus.dto.CommentResponseDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,16 +29,19 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final TicketAttachmentRepository attachmentRepository;
     private final UserRepository userRepository;
+    private final CommentRepository commentRepository;
 
     private final String UPLOAD_DIR = "uploads/tickets/";
 
     @Autowired
     public TicketService(TicketRepository ticketRepository, 
                          TicketAttachmentRepository attachmentRepository,
-                         UserRepository userRepository) {
+                         UserRepository userRepository,
+                         CommentRepository commentRepository) {
         this.ticketRepository = ticketRepository;
         this.attachmentRepository = attachmentRepository;
         this.userRepository = userRepository;
+        this.commentRepository = commentRepository;
     }
 
     public TicketResponseDTO createTicket(TicketRequestDTO dto, MultipartFile[] files, String userEmail) throws IOException {
@@ -89,6 +96,42 @@ public class TicketService {
         return tickets.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
+    public CommentResponseDTO addComment(Long ticketId, CommentRequestDTO dto, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
+        
+        Comment comment = new Comment();
+        comment.setTicket(ticket);
+        comment.setAuthor(user);
+        comment.setContent(dto.getContent());
+        comment = commentRepository.save(comment);
+
+        return mapCommentToDTO(comment);
+    }
+
+    public List<CommentResponseDTO> getTicketComments(Long ticketId) {
+        List<Comment> comments = commentRepository.findByTicketId(ticketId);
+        return comments.stream().map(this::mapCommentToDTO).collect(Collectors.toList());
+    }
+
+    public TicketAttachment getAttachment(Long attachmentId) {
+        return attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Attachment not found"));
+    }
+
+    private CommentResponseDTO mapCommentToDTO(Comment comment) {
+        CommentResponseDTO dto = new CommentResponseDTO();
+        dto.setId(comment.getId());
+        dto.setTicketId(comment.getTicket().getId());
+        dto.setAuthorId(comment.getAuthor().getId());
+        dto.setAuthorName(comment.getAuthor().getName());
+        dto.setContent(comment.getContent());
+        dto.setCreatedAt(comment.getCreatedAt());
+        return dto;
+    }
+
     private TicketResponseDTO mapToDTO(Ticket ticket) {
         TicketResponseDTO dto = new TicketResponseDTO();
         dto.setId(ticket.getId());
@@ -103,6 +146,11 @@ public class TicketService {
         dto.setReportedByName(ticket.getReportedBy().getName());
         dto.setCreatedAt(ticket.getCreatedAt());
         dto.setUpdatedAt(ticket.getUpdatedAt());
+
+        List<TicketAttachment> attachments = attachmentRepository.findByTicketId(ticket.getId());
+        dto.setAttachmentIds(attachments.stream().map(TicketAttachment::getId).collect(Collectors.toList()));
+        dto.setAttachmentNames(attachments.stream().map(TicketAttachment::getFileName).collect(Collectors.toList()));
+
         return dto;
     }
 }
