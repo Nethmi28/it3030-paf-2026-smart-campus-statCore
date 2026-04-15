@@ -8,7 +8,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import DashboardOverview from './pages/dashboard/DashboardOverview';
 import Resources from './pages/dashboard/Resources';
 import Bookings from './pages/dashboard/Bookings';
-import Tickets from './pages/dashboard/Tickets';
+import TicketUserView from './pages/dashboard/TicketUserView';
 import Notifications from './pages/dashboard/Notifications';
 import AdminDashboard from './pages/dashboard/admin/AdminDashboard';
 import AdminRegistrationRequests from './pages/dashboard/admin/AdminRegistrationRequests';
@@ -35,7 +35,7 @@ function App() {
             <Route index element={<DashboardOverview />} />
             <Route path="resources" element={<Resources />} />
             <Route path="bookings" element={<Bookings />} />
-            <Route path="tickets" element={<Tickets />} />
+            <Route path="tickets" element={<TicketUserView />} />
             <Route path="notifications" element={<Notifications />} />
             
             {/* New Role-Based placeholders mapped correctly */}
