@@ -10,6 +10,10 @@ public class CommentResponseDTO {
     private String authorName;
     private String content;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private boolean isEdited;
+    private boolean canEdit;
+    private boolean canDelete;
     
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -28,4 +32,16 @@ public class CommentResponseDTO {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public boolean isEdited() { return isEdited; }
+    public void setEdited(boolean edited) { isEdited = edited; }
+
+    public boolean isCanEdit() { return canEdit; }
+    public void setCanEdit(boolean canEdit) { this.canEdit = canEdit; }
+
+    public boolean isCanDelete() { return canDelete; }
+    public void setCanDelete(boolean canDelete) { this.canDelete = canDelete; }
 }

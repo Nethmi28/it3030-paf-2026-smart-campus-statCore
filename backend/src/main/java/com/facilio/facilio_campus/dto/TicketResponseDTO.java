@@ -21,6 +21,10 @@ public class TicketResponseDTO {
     private String assignedToName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String resolutionNotes;
+    private String rejectedReason;
+    private LocalDateTime resolvedAt;
+    private LocalDateTime closedAt;
     
     private List<String> attachmentNames;
     private List<Long> attachmentIds;
@@ -67,6 +71,18 @@ public class TicketResponseDTO {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getResolutionNotes() { return resolutionNotes; }
+    public void setResolutionNotes(String resolutionNotes) { this.resolutionNotes = resolutionNotes; }
+
+    public String getRejectedReason() { return rejectedReason; }
+    public void setRejectedReason(String rejectedReason) { this.rejectedReason = rejectedReason; }
+
+    public LocalDateTime getResolvedAt() { return resolvedAt; }
+    public void setResolvedAt(LocalDateTime resolvedAt) { this.resolvedAt = resolvedAt; }
+
+    public LocalDateTime getClosedAt() { return closedAt; }
+    public void setClosedAt(LocalDateTime closedAt) { this.closedAt = closedAt; }
 
     public List<String> getAttachmentNames() { return attachmentNames; }
     public void setAttachmentNames(List<String> attachmentNames) { this.attachmentNames = attachmentNames; }
