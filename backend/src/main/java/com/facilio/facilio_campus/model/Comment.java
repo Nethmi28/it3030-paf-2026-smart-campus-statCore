@@ -15,7 +15,6 @@ public class Comment {
     @JoinColumn(name = "ticket_id", nullable = false)
     private Ticket ticket;
 
-    // Both users and admins can leave comments, so we link to User.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id", nullable = false)
     private User author;
@@ -29,6 +28,9 @@ public class Comment {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "is_edited", nullable = false)
+    private boolean isEdited = false;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -38,6 +40,7 @@ public class Comment {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+        this.isEdited = true;
     }
 
     // Getters and setters
@@ -58,4 +61,7 @@ public class Comment {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public boolean isEdited() { return isEdited; }
+    public void setEdited(boolean edited) { isEdited = edited; }
 }
