@@ -11,6 +11,7 @@ import Bookings from './pages/dashboard/Bookings';
 import TicketUserView from './pages/dashboard/TicketUserView';
 import Notifications from './pages/dashboard/Notifications';
 import AdminDashboard from './pages/dashboard/admin/AdminDashboard';
+import AdminRegistrationRequests from './pages/dashboard/admin/AdminRegistrationRequests';
 import ManagerDashboard from './pages/dashboard/manager/ManagerDashboard';
 import TechnicianDashboard from './pages/dashboard/technician/TechnicianDashboard';
 import StudentDashboard from './pages/dashboard/student/StudentDashboard';
@@ -43,6 +44,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/registration-requests"
+              element={
+                <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+                  <AdminRegistrationRequests />
                 </ProtectedRoute>
               }
             />
