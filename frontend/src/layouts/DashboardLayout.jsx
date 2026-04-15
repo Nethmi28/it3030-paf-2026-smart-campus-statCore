@@ -1,12 +1,12 @@
-import { 
-  School, LayoutDashboard, Layers, CalendarDays, Ticket, Bell, LogOut 
+import {
+  School, LayoutDashboard, Layers, CalendarDays, Ticket, Bell, LogOut
 } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
-  
+
   // Safe fallback if not fully loaded yet to prevent flashes
   const currentUser = user || { name: 'Guest', role: 'ROLE_USER' };
 
@@ -23,6 +23,7 @@ export default function DashboardLayout() {
         { id: 'manager', label: 'Operations View', icon: <LayoutDashboard size={20} />, exact: true },
         { id: 'resources', label: 'Facilities Catalog', icon: <Layers size={20} /> },
         { id: 'bookings', label: 'Review Bookings', icon: <CalendarDays size={20} /> },
+        { id: 'tickets', label: 'Review Tickets', icon: <Ticket size={20} /> },
         { id: 'notifications', label: 'Notifications', icon: <Bell size={20} /> },
       ];
     }
@@ -46,7 +47,7 @@ export default function DashboardLayout() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-alt)', overflow: 'hidden' }}>
-      
+
       {/* Sidebar */}
       <div style={{ width: '260px', backgroundColor: '#0f172a', color: '#cbd5e1', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #1e293b' }}>
@@ -61,7 +62,7 @@ export default function DashboardLayout() {
 
         <div style={{ padding: '24px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {menuItems.map(item => (
-            <NavLink 
+            <NavLink
               key={item.id}
               to={`/dashboard${item.id ? '/' + item.id : ''}`}
               end={item.exact}
@@ -81,15 +82,15 @@ export default function DashboardLayout() {
 
       {/* Main Content Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-        
+
         {/* Topbar */}
         <div style={{ background: 'var(--bg-color)', padding: '16px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', zIndex: 10 }}>
           <div>
             <h1 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '4px' }}>Welcome back, {currentUser.name.split(' ')[0]}</h1>
             <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{new Date().toLocaleDateString()}</div>
           </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>            
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#3b82f6', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '600', fontSize: '1rem' }}>
                 {currentUser.name.charAt(0)}
@@ -100,9 +101,9 @@ export default function DashboardLayout() {
                   {currentUser.role.replace('ROLE_', '')}
                 </div>
               </div>
-              
-              <button 
-                onClick={logout} 
+
+              <button
+                onClick={logout}
                 title="Logout"
                 style={{ background: '#fee2e2', border: '1px solid #f87171', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', borderRadius: '8px', color: '#ef4444', marginLeft: '12px', transition: 'all 0.2s' }}
               >
