@@ -82,6 +82,11 @@ const deleteComment = async (commentId) => {
     return response.data;
 };
 
+const deleteTicket = async (ticketId) => {
+    const response = await axios.delete(`${API_URL}/${ticketId}`, getAuthConfig());
+    return response.data;
+};
+
 export const ticketService = {
     createTicket,
     getMyTickets,
@@ -94,5 +99,6 @@ export const ticketService = {
     getTicketComments,
     addComment,
     updateComment,
-    deleteComment
+    deleteComment,
+    deleteTicket
 };

@@ -11,11 +11,12 @@ export default function TicketUserView() {
   const [assignedTickets, setAssignedTickets] = useState([]);
   const [allTickets, setAllTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [viewMode, setViewMode] = useState('my'); // 'my', 'assigned', 'all'
+  const [viewMode, setViewMode] = useState('my');
   const [filters, setFilters] = useState({ status: '', priority: '', category: '' });
 
   const isAdminOrManager = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_MANAGER';
   const isTechnician = user?.role === 'ROLE_TECHNICIAN';
+  const isStudent = user?.role === 'ROLE_STUDENT';
 
   const fetchMyTickets = async () => {
     try {
@@ -54,7 +55,7 @@ export default function TicketUserView() {
         fetchAllTickets();
       }
     }
-  }, [activeTab, viewMode, filters]);
+  }, [activeTab, viewMode, filters.status, filters.priority, filters.category]);
 
   const getDisplayTickets = () => {
     if (viewMode === 'my') return myTickets;
@@ -83,19 +84,24 @@ export default function TicketUserView() {
     return colors[priority] || '#f3f4f6';
   };
 
+  // Only students can see the Create Ticket button
+  const canCreateTicket = isStudent;
+
   return (
     <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '4px' }}>
             {viewMode === 'my' ? 'My Tickets' : viewMode === 'assigned' ? 'Assigned to Me' : 'All Tickets'}
           </h2>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-            Track and manage service requests
+            {isStudent && 'Track and manage your service requests'}
+            {isTechnician && 'View and update tickets assigned to you'}
+            {isAdminOrManager && 'Manage and oversee all support tickets'}
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           {/* View Mode Tabs */}
           <div style={{ display: 'flex', background: 'var(--bg-icon)', padding: '4px', borderRadius: '8px' }}>
             <button
@@ -137,26 +143,28 @@ export default function TicketUserView() {
             )}
           </div>
 
-          {/* Create Ticket Button */}
-          <div style={{ display: 'flex', background: 'var(--bg-icon)', padding: '4px', borderRadius: '8px' }}>
-            <button
-              onClick={() => setActiveTab(activeTab === 'create' ? 'view' : 'create')}
-              style={{
-                padding: '8px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer',
-                fontWeight: '500', fontSize: '0.875rem',
-                background: activeTab === 'create' ? 'var(--bg-card)' : 'transparent',
-                color: activeTab === 'create' ? 'var(--text-primary)' : 'var(--text-muted)',
-              }}
-            >
-              {activeTab === 'create' ? 'Cancel' : '+ Create Ticket'}
-            </button>
-          </div>
+          {/* Create Ticket Button - Only Students */}
+          {canCreateTicket && (
+            <div style={{ display: 'flex', background: 'var(--bg-icon)', padding: '4px', borderRadius: '8px' }}>
+              <button
+                onClick={() => setActiveTab(activeTab === 'create' ? 'view' : 'create')}
+                style={{
+                  padding: '8px 16px', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                  fontWeight: '500', fontSize: '0.875rem',
+                  background: activeTab === 'create' ? 'var(--bg-card)' : 'transparent',
+                  color: activeTab === 'create' ? 'var(--text-primary)' : 'var(--text-muted)',
+                }}
+              >
+                {activeTab === 'create' ? 'Cancel' : '+ Create Ticket'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Filters for Admin/Manager View */}
       {viewMode === 'all' && activeTab === 'view' && (
-        <div style={{ display: 'flex', gap: '12px', padding: '16px', background: 'var(--bg-icon)', borderRadius: '8px' }}>
+        <div style={{ display: 'flex', gap: '12px', padding: '16px', background: 'var(--bg-icon)', borderRadius: '8px', flexWrap: 'wrap' }}>
           <select 
             value={filters.status} 
             onChange={(e) => setFilters({...filters, status: e.target.value})}
@@ -185,7 +193,7 @@ export default function TicketUserView() {
             placeholder="Category" 
             value={filters.category}
             onChange={(e) => setFilters({...filters, category: e.target.value})}
-            style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-card)' }}
+            style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', width: '150px' }}
           />
           <button 
             onClick={() => fetchAllTickets()}
@@ -221,7 +229,11 @@ export default function TicketUserView() {
             {getDisplayTickets().length === 0 ? (
               <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '48px' }}>
                 <p style={{ fontSize: '1.1rem', marginBottom: '8px' }}>No tickets found</p>
-                <p style={{ fontSize: '0.875rem' }}>Click "Create Ticket" to report an issue.</p>
+                <p style={{ fontSize: '0.875rem' }}>
+                  {isStudent && 'Click "Create Ticket" to report an issue.'}
+                  {isTechnician && 'No tickets have been assigned to you yet.'}
+                  {isAdminOrManager && 'No tickets have been submitted yet.'}
+                </p>
               </div>
             ) : (
               getDisplayTickets().map(ticket => (
@@ -240,7 +252,9 @@ export default function TicketUserView() {
                     justifyContent: 'space-between', 
                     alignItems: 'center',
                     transition: 'all 0.2s',
-                    background: 'var(--bg-card)'
+                    background: 'var(--bg-card)',
+                    flexWrap: 'wrap',
+                    gap: '12px'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'translateX(4px)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'translateX(0)'}
@@ -252,6 +266,7 @@ export default function TicketUserView() {
                     <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
                       Submitted on {new Date(ticket.createdAt).toLocaleDateString()}
                       {ticket.assignedToName && <span> • Assigned to: {ticket.assignedToName}</span>}
+                      {!isStudent && ticket.reportedByName && <span> • By: {ticket.reportedByName}</span>}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
