@@ -1,8 +1,10 @@
 package com.facilio.facilio_campus.controller;
 
 import com.facilio.facilio_campus.dto.AccountRequestDto;
+import com.facilio.facilio_campus.dto.AdminUserDto;
 import com.facilio.facilio_campus.dto.AuthResponse;
 import com.facilio.facilio_campus.dto.LoginRequest;
+import com.facilio.facilio_campus.dto.UpdateUserRoleDto;
 import com.facilio.facilio_campus.model.AccountRequest;
 import com.facilio.facilio_campus.model.Role;
 import com.facilio.facilio_campus.model.User;
@@ -22,6 +24,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -152,6 +155,54 @@ public class AuthController {
                 "email", email,
                 "temporaryPassword", temporaryPassword,
                 "status", accountRequest.getStatus()
+        ));
+    }
+
+    @GetMapping("/admin/users")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<?> getAdminUsers() {
+        List<AdminUserDto> users = userRepository.findAll()
+                .stream()
+                .map(user -> new AdminUserDto(
+                        user.getId(),
+                        user.getName(),
+                        user.getEmail(),
+                        user.getRole().name()
+                ))
+                .toList();
+
+        return ResponseEntity.ok(users);
+    }
+
+    @PatchMapping("/admin/users/{id}/role")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<?> updateUserRole(@PathVariable Long id, @RequestBody UpdateUserRoleDto request) {
+        String requestedRole = safeTrim(request.getRole()).toUpperCase();
+
+        if (requestedRole.isBlank()) {
+            return ResponseEntity.badRequest().body("A role is required.");
+        }
+
+        Role role;
+        try {
+            role = Role.valueOf(requestedRole);
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body("The selected role is not valid.");
+        }
+
+        User user = userRepository.findById(id).orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+        }
+
+        user.setRole(role);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(new AdminUserDto(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole().name()
         ));
     }
 
