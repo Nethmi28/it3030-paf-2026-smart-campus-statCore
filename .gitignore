@@ -18,3 +18,4 @@ $RECYCLE.BIN/
 # Global ignores for Node and Logs (just in case they run commands at root)
 node_modules/
 *.log
+m2repo/
