@@ -276,7 +276,7 @@ export default function LoginPage() {
                   type="submit"
                   disabled={isLoading}
                   style={{
-                    background: isLoading ? '#86efac' : '#16a34a',
+                    background: isLoading ? '#93c5fd' : '#2563eb',
                     color: 'white',
                     border: 'none',
                     borderRadius: '12px',
