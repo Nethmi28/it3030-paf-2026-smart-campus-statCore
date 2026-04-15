@@ -1,5 +1,12 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  clearStoredCampusUser,
+  getStoredCampusUser,
+  isSupportedCampusRole,
+  persistCampusUser,
+  resolveCampusCredentials
+} from '../utils/campusAuth';
 
 const AuthContext = createContext();
 
@@ -15,43 +22,72 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role');
-    const name = localStorage.getItem('name');
+    const storedUser = getStoredCampusUser();
 
-    if (token && role && name) {
-      setUser({ token, role, name });
+    if (storedUser) {
+      setUser(storedUser);
     }
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (username, password) => {
+    const resolvedCredentials = resolveCampusCredentials(username, password);
+    const useDemoAccount = resolvedCredentials.success;
+    const loginEmail = useDemoAccount
+      ? resolvedCredentials.account.email
+      : username.trim().toLowerCase();
+    const loginPassword = useDemoAccount
+      ? resolvedCredentials.account.backendPassword
+      : password;
+
     try {
       const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({
+          email: loginEmail,
+          password: loginPassword
+        })
       });
 
       if (!response.ok) throw new Error('Login failed');
 
       const data = await response.json();
-      
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('role', data.role);
-      localStorage.setItem('name', data.name);
-      
-      setUser({ token: data.token, role: data.role, name: data.name });
+
+      if (useDemoAccount && data.role !== resolvedCredentials.account.role) {
+        clearStoredCampusUser();
+        throw new Error('This campus account is linked to a different role.');
+      }
+
+      if (!isSupportedCampusRole(data.role)) {
+        clearStoredCampusUser();
+        throw new Error('This account role is not supported in the campus portal.');
+      }
+
+      const authenticatedUser = {
+        token: data.token,
+        role: data.role,
+        name: data.name
+      };
+
+      persistCampusUser(authenticatedUser);
+      setUser(authenticatedUser);
       return { success: true, role: data.role };
     } catch (error) {
-      return { success: false, error: error.message };
+      return {
+        success: false,
+        error:
+          error.message === 'Login failed'
+            ? useDemoAccount
+              ? 'Unable to sign in with this campus account right now.'
+              : 'Unable to sign in with this email and password.'
+            : error.message
+      };
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    localStorage.removeItem('name');
+    clearStoredCampusUser();
     setUser(null);
     navigate('/', { replace: true });
   };
