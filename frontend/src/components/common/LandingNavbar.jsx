@@ -70,7 +70,7 @@ export default function LandingNavbar() {
 
 
         <Link
-          to="/dashboard"
+          to="/login"
           style={{
             background: 'var(--accent)',
             color: 'var(--accent-text)',
