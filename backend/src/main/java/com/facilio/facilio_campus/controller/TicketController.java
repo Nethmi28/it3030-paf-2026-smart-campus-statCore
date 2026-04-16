@@ -242,4 +242,24 @@ public class TicketController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+    // Delete ticket - Manager or Admin only
+@DeleteMapping("/{ticketId}")
+public ResponseEntity<Void> deleteTicket(
+        @PathVariable Long ticketId,
+        Authentication authentication) {
+    try {
+        String userEmail = authentication.getName();
+        ticketService.deleteTicket(ticketId, userEmail);
+        return ResponseEntity.noContent().build();
+    } catch (IllegalArgumentException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    } catch (SecurityException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    } catch (IllegalStateException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).build();
+    }
+}
+
+    
 }

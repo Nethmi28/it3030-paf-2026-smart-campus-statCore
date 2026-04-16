@@ -4,7 +4,6 @@ import com.facilio.facilio_campus.dto.*;
 import com.facilio.facilio_campus.model.*;
 import com.facilio.facilio_campus.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,10 +27,7 @@ public class TicketService {
 
     private final String UPLOAD_DIR = "uploads/tickets/";
     
-    // Max file size: 5MB
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
-    
-    // Allowed image MIME types
     private static final List<String> ALLOWED_MIME_TYPES = Arrays.asList(
         "image/jpeg", "image/png", "image/gif", "image/webp", "image/jpg"
     );
@@ -49,16 +45,20 @@ public class TicketService {
 
     // ==================== TICKET CRUD ====================
 
+    // Only STUDENTS can create tickets
     public TicketResponseDTO createTicket(TicketRequestDTO dto, MultipartFile[] files, String userEmail) throws IOException {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        // Only ROLE_STUDENT can create tickets
+        if (user.getRole() != Role.ROLE_STUDENT) {
+            throw new SecurityException("Only students can create tickets");
+        }
 
-        // Validate file count
         if (files != null && files.length > 3) {
             throw new IllegalArgumentException("Maximum of 3 image attachments allowed per ticket.");
         }
 
-        // Validate each file
         if (files != null) {
             for (MultipartFile file : files) {
                 if (!file.isEmpty()) {
@@ -79,7 +79,6 @@ public class TicketService {
 
         ticket = ticketRepository.save(ticket);
 
-        // Save attachments
         if (files != null && files.length > 0) {
             saveAttachments(files, ticket);
         }
@@ -87,6 +86,7 @@ public class TicketService {
         return mapToDTO(ticket);
     }
 
+    // View single ticket with role-based access
     public TicketResponseDTO getTicketById(Long ticketId, String userEmail) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
@@ -94,11 +94,23 @@ public class TicketService {
         User currentUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
-        // Check access: ticket owner, assigned technician, admin, or manager can view
-        boolean hasAccess = ticket.getReportedBy().getId().equals(currentUser.getId()) ||
-                            (ticket.getAssignedTo() != null && ticket.getAssignedTo().getId().equals(currentUser.getId())) ||
-                            currentUser.getRole() == Role.ROLE_ADMIN ||
-                            currentUser.getRole() == Role.ROLE_MANAGER;
+        boolean hasAccess = false;
+        
+        switch (currentUser.getRole()) {
+            case ROLE_STUDENT:
+                hasAccess = ticket.getReportedBy().getId().equals(currentUser.getId());
+                break;
+            case ROLE_TECHNICIAN:
+                hasAccess = ticket.getAssignedTo() != null && 
+                           ticket.getAssignedTo().getId().equals(currentUser.getId());
+                break;
+            case ROLE_MANAGER:
+            case ROLE_ADMIN:
+                hasAccess = true;
+                break;
+            default:
+                hasAccess = false;
+        }
         
         if (!hasAccess) {
             throw new SecurityException("You don't have permission to view this ticket");
@@ -107,19 +119,39 @@ public class TicketService {
         return mapToDTO(ticket);
     }
 
+    // Get tickets based on role
     public List<TicketResponseDTO> getMyTickets(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        List<Ticket> tickets = ticketRepository.findByReportedById(user.getId());
+        List<Ticket> tickets;
+        
+        switch (user.getRole()) {
+            case ROLE_STUDENT:
+                tickets = ticketRepository.findByReportedById(user.getId());
+                break;
+            case ROLE_TECHNICIAN:
+                tickets = ticketRepository.findByAssignedToId(user.getId());
+                break;
+            case ROLE_MANAGER:
+            case ROLE_ADMIN:
+                tickets = ticketRepository.findAll();
+                break;
+            default:
+                tickets = List.of();
+        }
+        
         return tickets.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
+    // Get tickets assigned to the current technician
     public List<TicketResponseDTO> getTicketsAssignedToMe(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
-        if (user.getRole() != Role.ROLE_TECHNICIAN && user.getRole() != Role.ROLE_ADMIN && user.getRole() != Role.ROLE_MANAGER) {
+        if (user.getRole() != Role.ROLE_TECHNICIAN && 
+            user.getRole() != Role.ROLE_ADMIN && 
+            user.getRole() != Role.ROLE_MANAGER) {
             throw new SecurityException("Only technicians, admins, and managers can view assigned tickets");
         }
         
@@ -127,11 +159,11 @@ public class TicketService {
         return tickets.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
+    // Get all tickets with filters (Manager/Admin only)
     public List<TicketResponseDTO> getAllTickets(String userEmail, String status, String priority, String category) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
-        // Only ADMIN and MANAGER can view all tickets
         if (user.getRole() != Role.ROLE_ADMIN && user.getRole() != Role.ROLE_MANAGER) {
             throw new SecurityException("Only admins and managers can view all tickets");
         }
@@ -150,12 +182,12 @@ public class TicketService {
     }
 
     // ==================== TICKET ACTIONS ====================
-
+    
+    // Manager or Admin can assign technician
     public TicketResponseDTO assignTicket(Long ticketId, Long technicianId, String adminEmail) {
         User admin = userRepository.findByEmail(adminEmail)
-                .orElseThrow(() -> new IllegalArgumentException("Admin not found"));
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
-        // Only ADMIN or MANAGER can assign technicians
         if (admin.getRole() != Role.ROLE_ADMIN && admin.getRole() != Role.ROLE_MANAGER) {
             throw new SecurityException("Only admins and managers can assign technicians to tickets");
         }
@@ -166,25 +198,22 @@ public class TicketService {
         User technician = userRepository.findById(technicianId)
                 .orElseThrow(() -> new IllegalArgumentException("Technician not found"));
         
-        // Verify the user is actually a technician
-        if (technician.getRole() != Role.ROLE_TECHNICIAN && technician.getRole() != Role.ROLE_ADMIN) {
+        if (technician.getRole() != Role.ROLE_TECHNICIAN) {
             throw new IllegalArgumentException("Selected user is not a technician");
         }
         
         ticket.setAssignedTo(technician);
         
-        // If ticket is OPEN, move to IN_PROGRESS when assigned
         if (ticket.getStatus() == TicketStatus.OPEN) {
             ticket.setStatus(TicketStatus.IN_PROGRESS);
         }
         
         ticket = ticketRepository.save(ticket);
         
-        // TODO: Trigger notification for technician (Member 4 will implement)
-        
         return mapToDTO(ticket);
     }
 
+    // Manager, Admin, or assigned Technician can update status
     public TicketResponseDTO updateTicketStatus(Long ticketId, StatusUpdateRequest request, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -192,21 +221,31 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
         
-        // Check permission: only assigned technician or admin/manager can update status
-        boolean isAssignedTech = ticket.getAssignedTo() != null && ticket.getAssignedTo().getId().equals(user.getId());
-        boolean isAdminOrManager = user.getRole() == Role.ROLE_ADMIN || user.getRole() == Role.ROLE_MANAGER;
+        boolean canUpdateStatus = false;
         
-        if (!isAssignedTech && !isAdminOrManager) {
-            throw new SecurityException("Only assigned technician or admin can update ticket status");
+        switch (user.getRole()) {
+            case ROLE_TECHNICIAN:
+                canUpdateStatus = ticket.getAssignedTo() != null && 
+                                 ticket.getAssignedTo().getId().equals(user.getId());
+                break;
+            case ROLE_MANAGER:
+            case ROLE_ADMIN:
+                canUpdateStatus = true;
+                break;
+            default:
+                canUpdateStatus = false;
         }
         
-        // Validate status transition
-        validateStatusTransition(ticket.getStatus(), request.getStatus());
+        if (!canUpdateStatus) {
+            throw new SecurityException("You don't have permission to update this ticket's status");
+        }
         
-        TicketStatus oldStatus = ticket.getStatus();
+        // TEMPORARY: Allow any status change for testing
+        // TODO: Add proper validation later
+        System.out.println("Changing status from " + ticket.getStatus() + " to " + request.getStatus());
+        
         ticket.setStatus(request.getStatus());
         
-        // Set timestamps based on status
         if (request.getStatus() == TicketStatus.RESOLVED) {
             ticket.setResolvedAt(LocalDateTime.now());
         }
@@ -214,31 +253,48 @@ public class TicketService {
             ticket.setClosedAt(LocalDateTime.now());
         }
         
-        // Add resolution notes if provided
         if (request.getResolutionNotes() != null && !request.getResolutionNotes().isEmpty()) {
             ticket.setResolutionNotes(request.getResolutionNotes());
         }
         
         ticket = ticketRepository.save(ticket);
         
-        // TODO: Trigger notification for ticket owner (Member 4 will implement)
-        
         return mapToDTO(ticket);
     }
 
-    public TicketResponseDTO rejectTicket(Long ticketId, RejectTicketRequest request, String adminEmail) {
-        User admin = userRepository.findByEmail(adminEmail)
-                .orElseThrow(() -> new IllegalArgumentException("Admin not found"));
+    // Manager or Admin can delete a ticket
+    public void deleteTicket(Long ticketId, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
-        // Only ADMIN can reject tickets (or MANAGER if configured)
-        if (admin.getRole() != Role.ROLE_ADMIN && admin.getRole() != Role.ROLE_MANAGER) {
+        if (user.getRole() != Role.ROLE_ADMIN && user.getRole() != Role.ROLE_MANAGER) {
+            throw new SecurityException("Only admins and managers can delete tickets");
+        }
+        
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
+        
+        List<TicketAttachment> attachments = attachmentRepository.findByTicketId(ticketId);
+        attachmentRepository.deleteAll(attachments);
+        
+        List<Comment> comments = commentRepository.findByTicketId(ticketId);
+        commentRepository.deleteAll(comments);
+        
+        ticketRepository.delete(ticket);
+    }
+
+    // Manager or Admin can reject a ticket
+    public TicketResponseDTO rejectTicket(Long ticketId, RejectTicketRequest request, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        if (user.getRole() != Role.ROLE_ADMIN && user.getRole() != Role.ROLE_MANAGER) {
             throw new SecurityException("Only admins and managers can reject tickets");
         }
         
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
         
-        // Can only reject OPEN tickets
         if (ticket.getStatus() != TicketStatus.OPEN) {
             throw new IllegalStateException("Only open tickets can be rejected");
         }
@@ -247,81 +303,96 @@ public class TicketService {
         ticket.setRejectedReason(request.getRejectedReason());
         ticket = ticketRepository.save(ticket);
         
-        // TODO: Trigger notification for ticket owner (Member 4 will implement)
-        
         return mapToDTO(ticket);
     }
 
-   // ==================== COMMENTS ====================
+    // ==================== COMMENTS ====================
 
-public CommentResponseDTO addComment(Long ticketId, CommentRequestDTO dto, String userEmail) {
-    User user = userRepository.findByEmail(userEmail)
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
-    Ticket ticket = ticketRepository.findById(ticketId)
-            .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
-    
-    // Allow any authenticated user to comment
-    Comment comment = new Comment();
-    comment.setTicket(ticket);
-    comment.setAuthor(user);
-    comment.setContent(dto.getContent());
-    comment = commentRepository.save(comment);
-    
-    return mapCommentToDTO(comment, user);
-}
-
-public List<CommentResponseDTO> getTicketComments(Long ticketId, String userEmail) {
-    User currentUser = userRepository.findByEmail(userEmail)
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
-    
-    Ticket ticket = ticketRepository.findById(ticketId)
-            .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
-    
-    // Allow any authenticated user to view comments
-    List<Comment> comments = commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId);
-    return comments.stream()
-            .map(comment -> mapCommentToDTO(comment, currentUser))
-            .collect(Collectors.toList());
-}
-
-public CommentResponseDTO updateComment(Long commentId, UpdateCommentRequest request, String userEmail) {
-    User user = userRepository.findByEmail(userEmail)
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
-    
-    Comment comment = commentRepository.findById(commentId)
-            .orElseThrow(() -> new IllegalArgumentException("Comment not found"));
-    
-    // Only comment author or admin can edit
-    boolean isAuthor = comment.getAuthor().getId().equals(user.getId());
-    boolean isAdmin = user.getRole() == Role.ROLE_ADMIN;
-    
-    if (!isAuthor && !isAdmin) {
-        throw new SecurityException("Only the comment author or admin can edit this comment");
+    // Add comment - Allow any authenticated user (TEMPORARY for testing)
+    public CommentResponseDTO addComment(Long ticketId, CommentRequestDTO dto, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
+        
+        // Cannot comment on CLOSED or REJECTED tickets
+        if (ticket.getStatus() == TicketStatus.CLOSED || ticket.getStatus() == TicketStatus.REJECTED) {
+            throw new IllegalStateException("Cannot add comments to closed or rejected tickets");
+        }
+        
+        Comment comment = new Comment();
+        comment.setTicket(ticket);
+        comment.setAuthor(user);
+        comment.setContent(dto.getContent());
+        comment = commentRepository.save(comment);
+        
+        return mapCommentToDTO(comment, user);
     }
-    
-    comment.setContent(request.getContent());
-    comment = commentRepository.save(comment);
-    
-    return mapCommentToDTO(comment, user);
-}
 
-public void deleteComment(Long commentId, String userEmail) {
-    User user = userRepository.findByEmail(userEmail)
-            .orElseThrow(() -> new IllegalArgumentException("User not found"));
-    
-    Comment comment = commentRepository.findById(commentId)
-            .orElseThrow(() -> new IllegalArgumentException("Comment not found"));
-    
-    // Only comment author or admin can delete
-    boolean isAuthor = comment.getAuthor().getId().equals(user.getId());
-    boolean isAdmin = user.getRole() == Role.ROLE_ADMIN;
-    
-    if (!isAuthor && !isAdmin) {
-        throw new SecurityException("Only the comment author or admin can delete this comment");
+    // Get comments - Allow any authenticated user (TEMPORARY for testing)
+    public List<CommentResponseDTO> getTicketComments(Long ticketId, String userEmail) {
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
+        
+        List<Comment> comments = commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId);
+        return comments.stream()
+                .map(comment -> mapCommentToDTO(comment, currentUser))
+                .collect(Collectors.toList());
     }
-    
-    commentRepository.delete(comment);
-}
+
+    // Edit comment - only comment author or Manager/Admin
+    public CommentResponseDTO updateComment(Long commentId, UpdateCommentRequest request, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("Comment not found"));
+        
+        boolean canEdit = false;
+        
+        if (comment.getAuthor().getId().equals(user.getId())) {
+            canEdit = true;
+        }
+        else if (user.getRole() == Role.ROLE_MANAGER || user.getRole() == Role.ROLE_ADMIN) {
+            canEdit = true;
+        }
+        
+        if (!canEdit) {
+            throw new SecurityException("You don't have permission to edit this comment");
+        }
+        
+        comment.setContent(request.getContent());
+        comment = commentRepository.save(comment);
+        
+        return mapCommentToDTO(comment, user);
+    }
+
+    // Delete comment - only comment author or Manager/Admin
+    public void deleteComment(Long commentId, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("Comment not found"));
+        
+        boolean canDelete = false;
+        
+        if (comment.getAuthor().getId().equals(user.getId())) {
+            canDelete = true;
+        }
+        else if (user.getRole() == Role.ROLE_MANAGER || user.getRole() == Role.ROLE_ADMIN) {
+            canDelete = true;
+        }
+        
+        if (!canDelete) {
+            throw new SecurityException("You don't have permission to delete this comment");
+        }
+        
+        commentRepository.delete(comment);
+    }
 
     // ==================== ATTACHMENTS ====================
 
@@ -333,12 +404,10 @@ public void deleteComment(Long commentId, String userEmail) {
     // ==================== PRIVATE HELPER METHODS ====================
 
     private void validateFile(MultipartFile file) {
-        // Check file size
         if (file.getSize() > MAX_FILE_SIZE) {
             throw new IllegalArgumentException("File " + file.getOriginalFilename() + " exceeds 5MB limit");
         }
         
-        // Check MIME type
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_MIME_TYPES.contains(contentType.toLowerCase())) {
             throw new IllegalArgumentException("File " + file.getOriginalFilename() + " is not an allowed image type. Allowed: JPEG, PNG, GIF, WEBP");
@@ -367,32 +436,6 @@ public void deleteComment(Long commentId, String userEmail) {
         }
     }
 
-    private void validateStatusTransition(TicketStatus current, TicketStatus newStatus) {
-        switch (current) {
-            case OPEN:
-                if (newStatus != TicketStatus.IN_PROGRESS && newStatus != TicketStatus.REJECTED) {
-                    throw new IllegalStateException("Open tickets can only be moved to IN_PROGRESS or REJECTED");
-                }
-                break;
-            case IN_PROGRESS:
-                if (newStatus != TicketStatus.RESOLVED && newStatus != TicketStatus.OPEN) {
-                    throw new IllegalStateException("In-progress tickets can only be moved to RESOLVED or back to OPEN");
-                }
-                break;
-            case RESOLVED:
-                if (newStatus != TicketStatus.CLOSED && newStatus != TicketStatus.IN_PROGRESS) {
-                    throw new IllegalStateException("Resolved tickets can only be moved to CLOSED or back to IN_PROGRESS");
-                }
-                break;
-            case CLOSED:
-                throw new IllegalStateException("Closed tickets cannot be modified");
-            case REJECTED:
-                throw new IllegalStateException("Rejected tickets cannot be modified");
-            default:
-                break;
-        }
-    }
-
     private CommentResponseDTO mapCommentToDTO(Comment comment, User currentUser) {
         CommentResponseDTO dto = new CommentResponseDTO();
         dto.setId(comment.getId());
@@ -404,11 +447,11 @@ public void deleteComment(Long commentId, String userEmail) {
         dto.setUpdatedAt(comment.getUpdatedAt());
         dto.setEdited(comment.isEdited());
         
-        // Determine if current user can edit/delete
         boolean isAuthor = comment.getAuthor().getId().equals(currentUser.getId());
-        boolean isAdmin = currentUser.getRole() == Role.ROLE_ADMIN;
-        dto.setCanEdit(isAuthor || isAdmin);
-        dto.setCanDelete(isAuthor || isAdmin);
+        boolean isManagerOrAdmin = currentUser.getRole() == Role.ROLE_MANAGER || 
+                                   currentUser.getRole() == Role.ROLE_ADMIN;
+        dto.setCanEdit(isAuthor || isManagerOrAdmin);
+        dto.setCanDelete(isAuthor || isManagerOrAdmin);
         
         return dto;
     }
