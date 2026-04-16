@@ -3,7 +3,10 @@ package com.facilio.facilio_campus.dto;
 public class AccountRequestDto {
 
     private String fullName;
+    private String requestedRole;
     private String email;
+    private String googleEmail;
+    private String password;
     private String studentId;
     private String faculty;
     private String note;
@@ -24,6 +27,30 @@ public class AccountRequestDto {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getRequestedRole() {
+        return requestedRole;
+    }
+
+    public void setRequestedRole(String requestedRole) {
+        this.requestedRole = requestedRole;
+    }
+
+    public String getGoogleEmail() {
+        return googleEmail;
+    }
+
+    public void setGoogleEmail(String googleEmail) {
+        this.googleEmail = googleEmail;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public String getStudentId() {
