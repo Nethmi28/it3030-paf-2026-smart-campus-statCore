@@ -53,7 +53,7 @@ export default function LandingNavbar() {
       <ul style={{ display: 'flex', gap: '2.5rem', fontWeight: '500', color: 'var(--text-muted)' }}>
         <li><Link style={{ color: 'var(--text-primary)' }} to="/">Home</Link></li>
         <li><Link to="/facilities">Facilities</Link></li>
-        <li><Link to="/resources">Resources</Link></li>
+        <li><Link to="/dashboard/resources">Resources</Link></li>
         <li><Link to="/about">About Us</Link></li>
         <li><Link to="/contact">Contacts</Link></li>
       </ul>
@@ -70,7 +70,7 @@ export default function LandingNavbar() {
 
 
         <Link
-          to="/dashboard"
+          to="/login"
           style={{
             background: 'var(--accent)',
             color: 'var(--accent-text)',
