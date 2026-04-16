@@ -124,8 +124,6 @@ export default function Resources() {
                 {FACULTIES.map(faculty => (
                   <option key={faculty} value={faculty}>{faculty}</option>
                 ))}
-                <option value="General">General/Administration</option>
-                <option value="Student Services">Student Services</option>
               </select>
               <ChevronDown size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }} />
             </div>

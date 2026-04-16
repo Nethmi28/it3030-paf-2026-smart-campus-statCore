@@ -127,7 +127,10 @@ export const FACULTIES = [
   'Business School',
   'Faculty of Engineering',
   'School of architecture',
-  'Faculty of Humanities & science'
+  'Faculty of Humanities & science',
+  'Sports equipments',
+  'Student Services',
+  'General'
 ];
 
 export const CAPACITIES = [30, 60, 120, 240, 500];
