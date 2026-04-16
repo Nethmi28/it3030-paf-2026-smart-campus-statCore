@@ -50,14 +50,14 @@ export default function DashboardLayout() {
     <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-alt)', overflow: 'hidden' }}>
 
       {/* Sidebar */}
-      <div style={{ width: '260px', backgroundColor: '#0f172a', color: '#cbd5e1', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #1e293b' }}>
+      <div style={{ width: '260px', backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-color)' }}>
+        <div style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid var(--border-color)' }}>
           <div style={{ background: '#3b82f6', color: 'white', padding: '8px', borderRadius: '8px', display: 'flex' }}>
             <School size={24} />
           </div>
           <div>
-            <div style={{ fontWeight: 'bold', color: 'white', fontSize: '1rem' }}>Facilio Hub</div>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{currentUser.role.replace('ROLE_', '')} PORTAL</div>
+            <div style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '1rem' }}>Facilio Hub</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{currentUser.role.replace('ROLE_', '')} PORTAL</div>
           </div>
         </div>
 
@@ -69,7 +69,7 @@ export default function DashboardLayout() {
               end={item.exact}
               style={({ isActive }) => ({
                 display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', width: '100%',
-                background: isActive ? '#1e293b' : 'transparent', color: isActive ? 'white' : '#94a3b8',
+                background: isActive ? 'var(--bg-alt)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
                 border: 'none', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', fontWeight: '500',
                 transition: 'background 0.2s', textDecoration: 'none'
               })}
