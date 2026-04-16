@@ -1,30 +1,68 @@
-import { Printer, Calendar as CalendarIcon, Wrench } from 'lucide-react';
+import { Printer, Calendar as CalendarIcon, Wrench, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { bookingService } from '../../services/bookingService';
+import { ticketService } from '../../services/ticketService';
+
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8089';
 
 export default function DashboardOverview() {
-  const recentBookings = [
-    { id: 1, title: 'Computer Science Lab A', time: '2026-04-10 · 09:00-11:00', status: 'APPROVED' },
-    { id: 2, title: 'Main Auditorium', time: '2026-04-12 · 14:00-17:00', status: 'PENDING' },
-    { id: 3, title: 'Conference Room 101', time: '2026-04-08 · 10:00-11:30', status: 'REJECTED' },
-    { id: 4, title: 'Computer Science Lab A', time: '2026-04-20 · 14:00-16:00', status: 'CANCELLED' },
-  ];
+  const { user } = useAuth();
+  const [stats, setStats] = useState({ resources: 0, bookings: 0, tickets: 0 });
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [recentTickets, setRecentTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const recentTickets = [
-    { id: 1, title: 'Projector not working in Lab A', desc: 'Equipment · High', status: 'IN PROGRESS' },
-    { id: 2, title: 'AC malfunction in Seminar Hall 2', desc: 'HVAC · Medium', status: 'OPEN' },
-    { id: 3, title: 'Water leak in Physics Lab B', desc: 'Plumbing · High', status: 'IN PROGRESS' },
-  ];
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!user?.token) return;
+      setLoading(true);
+      try {
+        const [resourcesRes, bookings, tickets] = await Promise.all([
+          fetch(`${API_BASE}/api/resources`, { headers: { 'Authorization': `Bearer ${user.token}` } }),
+          bookingService.getMyBookings(user.token),
+          ticketService.getMyTickets(user.token)
+        ]);
+
+        const resources = await resourcesRes.json();
+        setStats({
+          resources: resources.length,
+          bookings: bookings.length,
+          tickets: tickets.length
+        });
+        setRecentBookings(bookings.slice(0, 4));
+        setRecentTickets(tickets.slice(0, 3));
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardData();
+  }, [user?.token]);
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case 'APPROVED': return { bg: '#dcfce7', text: '#22c55e' };
+      case 'APPROVED': 
+      case 'ACCEPTED': return { bg: '#dcfce7', text: '#22c55e' };
       case 'PENDING': return { bg: '#fef08a', text: '#eab308' };
       case 'REJECTED': return { bg: '#fee2e2', text: '#ef4444' };
       case 'CANCELLED': return { bg: '#f3f4f6', text: '#9ca3af' };
+      case 'IN_PROGRESS':
       case 'IN PROGRESS': return { bg: '#ffedd5', text: '#f97316' };
       case 'OPEN': return { bg: '#e0f2fe', text: '#38bdf8' };
       default: return { bg: '#f3f4f6', text: '#6b7280' };
     }
   };
+
+  if (loading) {
+     return (
+       <div style={{ padding: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+         <Loader2 size={40} className="animate-spin" style={{ color: '#3b82f6' }} />
+         <p style={{ color: 'var(--text-muted)' }}>Loading Activity...</p>
+       </div>
+     );
+  }
 
   return (
     <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -43,7 +81,7 @@ export default function DashboardOverview() {
         }}>
           <div>
             <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '8px' }}>Available Resources</div>
-            <div style={{ fontSize: '2rem', fontWeight: '700' }}>7</div>
+            <div style={{ fontSize: '2rem', fontWeight: '700' }}>{stats.resources}</div>
           </div>
           <div style={{ background: '#eff6ff', padding: '16px', borderRadius: '12px', color: '#3b82f6' }}>
             <Printer size={28} />
@@ -58,7 +96,7 @@ export default function DashboardOverview() {
         }}>
           <div>
             <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '8px' }}>My Bookings</div>
-            <div style={{ fontSize: '2rem', fontWeight: '700' }}>4</div>
+            <div style={{ fontSize: '2rem', fontWeight: '700' }}>{stats.bookings}</div>
           </div>
           <div style={{ background: '#f0fdf4', padding: '16px', borderRadius: '12px', color: '#22c55e' }}>
             <CalendarIcon size={28} />
@@ -73,7 +111,7 @@ export default function DashboardOverview() {
         }}>
           <div>
             <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '8px' }}>My Tickets</div>
-            <div style={{ fontSize: '2rem', fontWeight: '700' }}>3</div>
+            <div style={{ fontSize: '2rem', fontWeight: '700' }}>{stats.tickets}</div>
           </div>
           <div style={{ background: '#fffbeb', padding: '16px', borderRadius: '12px', color: '#f59e0b' }}>
             <Wrench size={28} />
@@ -97,15 +135,15 @@ export default function DashboardOverview() {
                 padding: '16px', background: 'var(--bg-icon)', borderRadius: '8px'
               }}>
                 <div>
-                  <div style={{ fontWeight: '500', fontSize: '0.9rem', marginBottom: '4px' }}>{item.title}</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{item.time}</div>
+                  <div style={{ fontWeight: '500', fontSize: '0.9rem', marginBottom: '4px' }}>{item.resourceName}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{item.bookingDate} · {item.startTime}-{item.endTime}</div>
                 </div>
                 <div style={{ 
                   background: getStatusStyle(item.status).bg, 
                   color: getStatusStyle(item.status).text,
                   padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600'
                 }}>
-                  {item.status}
+                  {item.status === 'APPROVED' ? 'ACCEPTED' : item.status}
                 </div>
               </div>
             ))}
@@ -125,8 +163,8 @@ export default function DashboardOverview() {
                 padding: '16px', background: 'var(--bg-icon)', borderRadius: '8px'
               }}>
                 <div>
-                  <div style={{ fontWeight: '500', fontSize: '0.9rem', marginBottom: '4px' }}>{item.title}</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{item.desc}</div>
+                  <div style={{ fontWeight: '500', fontSize: '0.9rem', marginBottom: '4px' }}>{item.category}: {item.description.substring(0, 30)}...</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>ID: #{item.id} · {item.priority} Priority</div>
                 </div>
                 <div style={{ 
                   background: getStatusStyle(item.status).bg, 

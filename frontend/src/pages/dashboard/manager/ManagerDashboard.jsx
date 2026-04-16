@@ -1,11 +1,63 @@
-import { Building, CalendarCheck, FileText, Settings } from 'lucide-react';
+import { Building, CalendarCheck, FileText, Settings, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../../contexts/AuthContext';
+import { bookingService } from '../../../services/bookingService';
+import { ticketService } from '../../../services/ticketService';
+import { useNavigate } from 'react-router-dom';
+
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8089';
 
 export default function ManagerDashboard() {
-  const stats = [
-    { title: 'Total Facilities', value: '45', icon: <Building size={24} />, color: '#3b82f6' },
-    { title: 'Active Bookings', value: '18', icon: <CalendarCheck size={24} />, color: '#10b981' },
-    { title: 'Pending Reports', value: '5', icon: <FileText size={24} />, color: '#f59e0b' },
-    { title: 'Maintenance', value: '3', icon: <Settings size={24} />, color: '#6366f1' },
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [stats, setStats] = useState({ facilities: 0, activeBookings: 0, reports: 0, repairs: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchManagerStats = async () => {
+      if (!user?.token) return;
+      setLoading(true);
+      try {
+        const [res, bk, tk] = await Promise.all([
+          fetch(`${API_BASE}/api/resources`, { headers: { 'Authorization': `Bearer ${user.token}` } }),
+          bookingService.getAllBookings(user.token),
+          ticketService.getMyTickets(user.token)
+        ]);
+
+        const resources = await res.json();
+        const pendingBk = bk.filter(b => b.status === 'PENDING').length;
+        const openTk = tk.filter(t => t.status === 'OPEN').length;
+        const inProgTk = tk.filter(t => t.status === 'IN_PROGRESS').length;
+
+        setStats({
+          facilities: resources.length,
+          activeBookings: bk.filter(b => b.status === 'APPROVED' || b.status === 'PENDING').length,
+          reports: openTk,
+          repairs: inProgTk
+        });
+      } catch (err) {
+        console.error("Manager dashboard stats error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchManagerStats();
+  }, [user?.token]);
+
+  if (loading) {
+    return (
+      <div style={{ padding: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+        <Loader2 size={40} className="animate-spin" style={{ color: '#3b82f6' }} />
+        <p style={{ color: '#64748b' }}>Loading Manager Console...</p>
+      </div>
+    );
+  }
+
+  const statsDisplay = [
+    { title: 'Total Facilities', value: stats.facilities, icon: <Building size={24} />, color: '#3b82f6' },
+    { title: 'Active Bookings', value: stats.activeBookings, icon: <CalendarCheck size={24} />, color: '#10b981' },
+    { title: 'Pending Reports', value: stats.reports, icon: <FileText size={24} />, color: '#f59e0b' },
+    { title: 'Maintenance', value: stats.repairs, icon: <Settings size={24} />, color: '#6366f1' },
   ];
 
   return (
@@ -16,7 +68,7 @@ export default function ManagerDashboard() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-        {stats.map((stat, i) => (
+        {statsDisplay.map((stat, i) => (
           <div key={i} style={{ background: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{ background: `${stat.color}15`, padding: '16px', borderRadius: '12px', color: stat.color }}>
               {stat.icon}
@@ -44,11 +96,21 @@ export default function ManagerDashboard() {
         </div>
 
         <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-           <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#0f172a', marginBottom: '16px' }}>Quick Actions</h3>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#0f172a', marginBottom: '16px' }}>Quick Actions</h3>
            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-             <button style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#334155', fontWeight: '500', textAlign: 'left', cursor: 'pointer' }}>Review Pending Bookings</button>
+             <button 
+               onClick={() => navigate('/dashboard/bookings')}
+               style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#334155', fontWeight: '500', textAlign: 'left', cursor: 'pointer' }}
+             >
+               Review Pending Bookings
+             </button>
              <button style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#334155', fontWeight: '500', textAlign: 'left', cursor: 'pointer' }}>Generate Usage Report</button>
-             <button style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#334155', fontWeight: '500', textAlign: 'left', cursor: 'pointer' }}>Manage Facilities</button>
+             <button 
+               onClick={() => navigate('/dashboard/resources')}
+               style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#334155', fontWeight: '500', textAlign: 'left', cursor: 'pointer' }}
+             >
+               Manage Facilities
+             </button>
            </div>
         </div>
       </div>
