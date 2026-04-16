@@ -36,6 +36,12 @@ public class Booking {
     @Column(name = "expected_attendees")
     private Integer expectedAttendees;
 
+    @Column(name = "faculty_approval_pdf")
+    private String facultyApprovalPdf;
+
+    @Column(name = "additional_requirements", columnDefinition = "TEXT")
+    private String additionalRequirements;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private BookingStatus status = BookingStatus.PENDING;
@@ -87,6 +93,12 @@ public class Booking {
 
     public Integer getExpectedAttendees() { return expectedAttendees; }
     public void setExpectedAttendees(Integer expectedAttendees) { this.expectedAttendees = expectedAttendees; }
+
+    public String getFacultyApprovalPdf() { return facultyApprovalPdf; }
+    public void setFacultyApprovalPdf(String facultyApprovalPdf) { this.facultyApprovalPdf = facultyApprovalPdf; }
+
+    public String getAdditionalRequirements() { return additionalRequirements; }
+    public void setAdditionalRequirements(String additionalRequirements) { this.additionalRequirements = additionalRequirements; }
 
     public BookingStatus getStatus() { return status; }
     public void setStatus(BookingStatus status) { this.status = status; }

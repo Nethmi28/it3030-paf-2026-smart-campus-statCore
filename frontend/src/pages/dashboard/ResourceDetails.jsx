@@ -229,6 +229,7 @@ export default function ResourceDetails() {
               gap: '10px',
               transition: 'transform 0.2s ease'
             }}
+            onClick={() => navigate('/dashboard/bookings', { state: { selectedResourceId: resource.id, action: 'create' } })}
             onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
             onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
             >
