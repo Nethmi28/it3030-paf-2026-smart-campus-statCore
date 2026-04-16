@@ -1,33 +1,8 @@
-import { School, Moon, Sun } from 'lucide-react';
+import { School } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import ThemeToggle from './ThemeToggle';
 
 export default function LandingNavbar() {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    // Check initial theme
-    if (localStorage.getItem('theme') === 'dark' ||
-      (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      document.documentElement.classList.add('dark');
-      setIsDark(true);
-    }
-  }, []);
-
-
-
-  const toggleTheme = () => {
-    if (isDark) {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-      setIsDark(false);
-    } else {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-      setIsDark(true);
-    }
-  };
-
   return (
     <nav style={{
       display: 'flex',
@@ -53,20 +28,14 @@ export default function LandingNavbar() {
       <ul style={{ display: 'flex', gap: '2.5rem', fontWeight: '500', color: 'var(--text-muted)' }}>
         <li><Link style={{ color: 'var(--text-primary)' }} to="/">Home</Link></li>
         <li><Link to="/facilities">Facilities</Link></li>
-        <li><Link to="/resources">Resources</Link></li>
+        <li><Link to="/dashboard/resources">Resources</Link></li>
         <li><Link to="/about">About Us</Link></li>
         <li><Link to="/contact">Contacts</Link></li>
       </ul>
 
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <button
-          onClick={toggleTheme}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)', display: 'flex', alignItems: 'center' }}
-          aria-label="Toggle Dark Mode"
-        >
-          {isDark ? <Sun size={22} /> : <Moon size={22} />}
-        </button>
+        <ThemeToggle />
 
 
         <Link
