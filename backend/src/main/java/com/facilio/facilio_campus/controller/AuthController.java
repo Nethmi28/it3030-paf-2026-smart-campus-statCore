@@ -4,6 +4,7 @@ import com.facilio.facilio_campus.dto.AccountRequestDto;
 import com.facilio.facilio_campus.dto.AdminUserDto;
 import com.facilio.facilio_campus.dto.AuthResponse;
 import com.facilio.facilio_campus.dto.LoginRequest;
+import com.facilio.facilio_campus.dto.OAuthExchangeRequest;
 import com.facilio.facilio_campus.dto.UpdateUserRoleDto;
 import com.facilio.facilio_campus.model.AccountRequest;
 import com.facilio.facilio_campus.model.Role;
@@ -12,6 +13,8 @@ import com.facilio.facilio_campus.repository.AccountRequestRepository;
 import com.facilio.facilio_campus.repository.UserRepository;
 import com.facilio.facilio_campus.security.CustomUserDetails;
 import com.facilio.facilio_campus.security.JwtUtil;
+import com.facilio.facilio_campus.security.OAuthLoginHandoffService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
@@ -19,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -38,11 +42,13 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final Environment environment;
     private final boolean enableTestUserEndpoint;
+    private final OAuthLoginHandoffService oAuthLoginHandoffService;
 
     public AuthController(AuthenticationManager authenticationManager, JwtUtil jwtUtil, 
                           UserRepository userRepository, AccountRequestRepository accountRequestRepository,
                           PasswordEncoder passwordEncoder,
                           Environment environment,
+                          OAuthLoginHandoffService oAuthLoginHandoffService,
                           @Value("${app.auth.enable-test-user:true}") boolean enableTestUserEndpoint) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
@@ -50,54 +56,98 @@ public class AuthController {
         this.accountRequestRepository = accountRequestRepository;
         this.passwordEncoder = passwordEncoder;
         this.environment = environment;
+        this.oAuthLoginHandoffService = oAuthLoginHandoffService;
         this.enableTestUserEndpoint = enableTestUserEndpoint;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
-        
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getEmail(),
-                        loginRequest.getPassword()
-                )
-        );
+    public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail().trim().toLowerCase(),
+                            loginRequest.getPassword()
+                    )
+            );
 
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        String jwt = jwtUtil.generateToken(userDetails);
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            return ResponseEntity.ok(buildAuthResponse(userDetails));
+        } catch (AuthenticationException exception) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password.");
+        }
+    }
 
-        return ResponseEntity.ok(new AuthResponse(
-                jwt,
-                userDetails.getUser().getName(),
-                userDetails.getUser().getRole().name()
-        ));
+    @PostMapping("/oauth/exchange")
+    public ResponseEntity<?> exchangeOAuthCode(@Valid @RequestBody OAuthExchangeRequest request) {
+        return oAuthLoginHandoffService.consumeCode(request.getCode())
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("The Google sign-in session is invalid or has expired."));
     }
 
     @PostMapping("/account-requests")
     public ResponseEntity<?> createAccountRequest(@RequestBody AccountRequestDto request) {
         String fullName = safeTrim(request.getFullName());
+        String requestedRoleValue = safeTrim(request.getRequestedRole());
         String email = safeTrim(request.getEmail()).toLowerCase();
+        String googleEmail = normalizeOptionalEmail(request.getGoogleEmail());
+        String password = safeTrim(request.getPassword());
         String studentId = safeTrim(request.getStudentId()).toUpperCase();
         String faculty = safeTrim(request.getFaculty());
         String note = safeTrim(request.getNote());
+        Role requestedRole = parseRequestedRole(requestedRoleValue);
 
-        if (fullName.isBlank() || email.isBlank() || studentId.isBlank() || faculty.isBlank()) {
-            return ResponseEntity.badRequest().body("Full name, university email, student ID, and faculty are required.");
+        if (fullName.isBlank() || requestedRoleValue.isBlank() || email.isBlank() || studentId.isBlank() || faculty.isBlank()) {
+            return ResponseEntity.badRequest().body("Full name, role, campus email, campus ID, and faculty or unit are required.");
+        }
+
+        if (requestedRole == null) {
+            return ResponseEntity.badRequest().body("Choose a valid account role for your request.");
         }
 
         if (!email.contains("@")) {
             return ResponseEntity.badRequest().body("Enter a valid email address.");
         }
 
+        if (!googleEmail.isBlank() && !googleEmail.contains("@")) {
+            return ResponseEntity.badRequest().body("Enter a valid Google sign-in email address.");
+        }
+
+        if (!isValidRequestedPassword(password)) {
+            return ResponseEntity.badRequest().body("Choose a password with at least 8 characters for your account request.");
+        }
+
+        if (!isValidCampusIdentity(requestedRole, email, studentId)) {
+            return ResponseEntity.badRequest().body("Use the correct campus ID and email format for the selected role. Example: st23707290 / st23707290@my.cu.lk.");
+        }
+
         if (userRepository.existsByEmail(email)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("An account already exists for this email.");
+        }
+
+        if (!googleEmail.isBlank() && userRepository.existsByGoogleEmailIgnoreCase(googleEmail)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("This Google sign-in email is already linked to another account.");
         }
 
         if (accountRequestRepository.existsByEmailIgnoreCase(email) || accountRequestRepository.existsByStudentIdIgnoreCase(studentId)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("A request has already been sent for this student.");
         }
 
-        AccountRequest accountRequest = new AccountRequest(fullName, email, studentId, faculty, note, "PENDING");
+        if (!googleEmail.isBlank() && accountRequestRepository.existsByGoogleEmailIgnoreCase(googleEmail)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("A request has already been sent with this Google sign-in email.");
+        }
+
+        AccountRequest accountRequest = new AccountRequest(
+                fullName,
+                email,
+                googleEmail,
+                passwordEncoder.encode(password),
+                requestedRole.name(),
+                studentId,
+                faculty,
+                note,
+                "PENDING"
+        );
         accountRequestRepository.save(accountRequest);
 
         return ResponseEntity.status(HttpStatus.CREATED).body("Your account request has been sent to the campus admin team.");
@@ -120,40 +170,69 @@ public class AuthController {
         }
 
         String email = safeTrim(accountRequest.getEmail()).toLowerCase();
+        String googleEmail = normalizeOptionalEmail(accountRequest.getGoogleEmail());
         String studentId = safeTrim(accountRequest.getStudentId()).toUpperCase();
+        Role requestedRole = parseRequestedRole(accountRequest.getRequestedRole());
+
+        User userLinkedToGoogleEmail = googleEmail.isBlank()
+                ? null
+                : userRepository.findByGoogleEmailIgnoreCase(googleEmail).orElse(null);
 
         if ("APPROVED".equalsIgnoreCase(accountRequest.getStatus())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("This registration request has already been approved.");
         }
 
+        if (requestedRole == null) {
+            requestedRole = Role.ROLE_STUDENT;
+        }
+
         if (userRepository.existsByEmail(email)) {
+            User existingUser = userRepository.findByEmail(email).orElseThrow();
+            if (userLinkedToGoogleEmail != null && !existingUser.getId().equals(userLinkedToGoogleEmail.getId())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("This Google sign-in email is already linked to another account.");
+            }
+            if (!googleEmail.isBlank()) {
+                existingUser.setGoogleEmail(googleEmail);
+            }
+            existingUser.setRole(requestedRole);
+            userRepository.save(existingUser);
             accountRequest.setStatus("APPROVED");
             accountRequestRepository.save(accountRequest);
             return ResponseEntity.ok(Map.of(
-                    "message", "A student account already exists for this request.",
+                    "message", "An account already exists for this campus email.",
                     "email", email,
-                    "temporaryPassword", buildTemporaryPassword(studentId),
+                    "loginNote", "The existing account keeps its current password.",
                     "status", accountRequest.getStatus()
             ));
         }
 
         String temporaryPassword = buildTemporaryPassword(studentId);
+        String approvedPasswordHash = accountRequest.getPasswordHash();
 
-        User newStudent = new User(
+        if (userLinkedToGoogleEmail != null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("This Google sign-in email is already linked to another account.");
+        }
+
+        User newUser = new User(
                 accountRequest.getFullName(),
                 email,
-                passwordEncoder.encode(temporaryPassword),
-                Role.ROLE_STUDENT
+                googleEmail.isBlank() ? null : googleEmail,
+                approvedPasswordHash == null || approvedPasswordHash.isBlank()
+                        ? passwordEncoder.encode(temporaryPassword)
+                        : approvedPasswordHash,
+                requestedRole
         );
-        userRepository.save(newStudent);
+        userRepository.save(newUser);
 
         accountRequest.setStatus("APPROVED");
         accountRequestRepository.save(accountRequest);
 
         return ResponseEntity.ok(Map.of(
-                "message", "Student access has been approved.",
+                "message", "Account access has been approved.",
                 "email", email,
-                "temporaryPassword", temporaryPassword,
+                "loginNote", approvedPasswordHash == null || approvedPasswordHash.isBlank()
+                        ? "Temporary password: " + temporaryPassword
+                        : "The user can now sign in with the password they created in the request form.",
                 "status", accountRequest.getStatus()
         ));
     }
@@ -214,18 +293,10 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
-        if (!userRepository.existsByEmail("test@campus.edu")) {
-             userRepository.save(new User("System Admin", "test@campus.edu", passwordEncoder.encode("password123"), Role.ROLE_ADMIN));
-        }
-        if (!userRepository.existsByEmail("mghettiarchhi@fcu.lk")) {
-             userRepository.save(new User("Manager Ghettiarchhi", "mghettiarchhi@fcu.lk", passwordEncoder.encode("password123"), Role.ROLE_MANAGER));
-        }
-        if (!userRepository.existsByEmail("tcsaman@fcu.lk")) {
-             userRepository.save(new User("Technician Saman", "tcsaman@fcu.lk", passwordEncoder.encode("password123"), Role.ROLE_TECHNICIAN));
-        }
-        if (!userRepository.existsByEmail("cu2354675@fcu.lk")) {
-             userRepository.save(new User("Student Center", "cu2354675@fcu.lk", passwordEncoder.encode("password123"), Role.ROLE_STUDENT));
-        }
+        upsertTestUser("System Admin", "test@campus.edu", "AD@2026", Role.ROLE_ADMIN);
+        upsertTestUser("Manager Ghettiarchhi", "mghettiarchhi@fcu.lk", "MG@2026", Role.ROLE_MANAGER);
+        upsertTestUser("Technician Saman", "tcsaman@fcu.lk", "TC@2026", Role.ROLE_TECHNICIAN);
+        upsertTestUser("Student Center", "cu2354675@fcu.lk", "ST@2026", Role.ROLE_STUDENT);
 
         return ResponseEntity.ok("All test users verified/seeded successfully!");
     }
@@ -234,7 +305,78 @@ public class AuthController {
         return value == null ? "" : value.trim();
     }
 
+    private String normalizeOptionalEmail(String value) {
+        return safeTrim(value).toLowerCase();
+    }
+
+    private AuthResponse buildAuthResponse(CustomUserDetails userDetails) {
+        String jwt = jwtUtil.generateToken(userDetails);
+        return new AuthResponse(
+                jwt,
+                userDetails.getUser().getName(),
+                userDetails.getUser().getRole().name()
+        );
+    }
+
     private String buildTemporaryPassword(String studentId) {
         return studentId + "@2026";
+    }
+
+    private boolean isValidRequestedPassword(String password) {
+        return password != null && password.length() >= 8;
+    }
+
+    private Role parseRequestedRole(String requestedRole) {
+        String normalizedRole = safeTrim(requestedRole).toUpperCase();
+        if (normalizedRole.isBlank()) {
+            return null;
+        }
+
+        try {
+            return Role.valueOf(normalizedRole);
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+    }
+
+    private boolean isValidCampusIdentity(Role role, String email, String campusId) {
+        if (role == null) {
+            return false;
+        }
+
+        String normalizedEmail = safeTrim(email).toLowerCase();
+        String normalizedCampusId = safeTrim(campusId).toLowerCase();
+        String expectedPrefix = getRolePrefix(role);
+
+        if (expectedPrefix.isBlank()) {
+            return false;
+        }
+
+        String expectedPattern = "^" + expectedPrefix + "\\d+@my\\.cu\\.lk$";
+        if (!normalizedEmail.matches(expectedPattern)) {
+            return false;
+        }
+
+        return normalizedCampusId.matches("^" + expectedPrefix + "\\d+$")
+                && normalizedEmail.substring(0, normalizedEmail.indexOf('@')).equals(normalizedCampusId);
+    }
+
+    private String getRolePrefix(Role role) {
+        return switch (role) {
+            case ROLE_ADMIN -> "ad";
+            case ROLE_MANAGER -> "mg";
+            case ROLE_TECHNICIAN -> "tc";
+            case ROLE_STUDENT -> "st";
+        };
+    }
+
+    private void upsertTestUser(String name, String email, String rawPassword, Role role) {
+        User user = userRepository.findByEmail(email)
+                .orElse(new User(name, email, passwordEncoder.encode(rawPassword), role));
+
+        user.setName(name);
+        user.setRole(role);
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        userRepository.save(user);
     }
 }

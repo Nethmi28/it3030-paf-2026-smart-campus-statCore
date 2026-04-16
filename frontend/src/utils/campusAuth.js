@@ -6,7 +6,6 @@ export const CAMPUS_ACCOUNTS = [
     username: 'st.cu2354675',
     password: 'ST@2026',
     email: 'cu2354675@fcu.lk',
-    backendPassword: 'password123',
     name: 'Student Center',
     accent: '#2563eb',
     surface: '#eff6ff'
@@ -18,7 +17,6 @@ export const CAMPUS_ACCOUNTS = [
     username: 'tc.saman',
     password: 'TC@2026',
     email: 'tcsaman@fcu.lk',
-    backendPassword: 'password123',
     name: 'Technician Saman',
     accent: '#d97706',
     surface: '#fff7ed'
@@ -30,7 +28,6 @@ export const CAMPUS_ACCOUNTS = [
     username: 'mg.ghettiarchhi',
     password: 'MG@2026',
     email: 'mghettiarchhi@fcu.lk',
-    backendPassword: 'password123',
     name: 'Manager Ghettiarchhi',
     accent: '#059669',
     surface: '#ecfdf5'
@@ -42,7 +39,6 @@ export const CAMPUS_ACCOUNTS = [
     username: 'ad.campus',
     password: 'AD@2026',
     email: 'test@campus.edu',
-    backendPassword: 'password123',
     name: 'System Admin',
     accent: '#7c3aed',
     surface: '#f5f3ff'

@@ -16,6 +16,9 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(unique = true)
+    private String googleEmail;
+
     @Column(nullable = false)
     private String password;
 
@@ -26,8 +29,13 @@ public class User {
     public User() {}
 
     public User(String name, String email, String password, Role role) {
+        this(name, email, null, password, role);
+    }
+
+    public User(String name, String email, String googleEmail, String password, Role role) {
         this.name = name;
         this.email = email;
+        this.googleEmail = googleEmail;
         this.password = password;
         this.role = role;
     }
@@ -40,6 +48,9 @@ public class User {
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    public String getGoogleEmail() { return googleEmail; }
+    public void setGoogleEmail(String googleEmail) { this.googleEmail = googleEmail; }
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }

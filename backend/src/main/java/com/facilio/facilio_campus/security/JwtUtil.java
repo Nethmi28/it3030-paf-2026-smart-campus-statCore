@@ -17,11 +17,10 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    // In a real app, inject this from application.properties securely
-    @Value("${jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
+    @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expiration.ms:86400000}") // 1 day default
+    @Value("${jwt.expiration.ms:86400000}")
     private long jwtExpirationMs;
 
     private SecretKey getSigningKey() {

@@ -19,6 +19,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -31,15 +33,24 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final CustomUserDetailsService userDetailsService;
     private final List<String> allowedOrigins;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final boolean googleOAuthEnabled;
+    private final String frontendFailureUrl;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthFilter,
             CustomUserDetailsService userDetailsService,
-            @Value("${app.security.allowed-origins:http://localhost:5173,http://localhost:3000}") String allowedOrigins
+            OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler,
+            @Value("${app.security.allowed-origins:http://localhost:5173,http://localhost:3000}") String allowedOrigins,
+            @Value("${app.oauth2.google.enabled:false}") boolean googleOAuthEnabled,
+            @Value("${app.oauth2.frontend-failure-url:http://localhost:5173/login}") String frontendFailureUrl
     ) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
         this.allowedOrigins = Arrays.asList(allowedOrigins.split(","));
+        this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
+        this.googleOAuthEnabled = googleOAuthEnabled;
+        this.frontendFailureUrl = frontendFailureUrl;
     }
 
     @Bean
@@ -49,11 +60,26 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(
+                        googleOAuthEnabled ? SessionCreationPolicy.IF_REQUIRED : SessionCreationPolicy.STATELESS
+                ))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        if (googleOAuthEnabled) {
+            http.oauth2Login(oauth -> oauth
+                    .successHandler(oAuth2LoginSuccessHandler)
+                    .failureHandler((request, response, exception) -> response.sendRedirect(
+                            frontendFailureUrl + "?oauthError=" + URLEncoder.encode(
+                                    "Google sign-in failed. Please try again.",
+                                    StandardCharsets.UTF_8
+                            )
+                    ))
+            );
+        }
 
         return http.build();
     }

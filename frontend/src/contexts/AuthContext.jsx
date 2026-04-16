@@ -30,6 +30,39 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  const applyAuthenticatedUser = (authPayload) => {
+    if (!authPayload?.token || !authPayload?.name || !isSupportedCampusRole(authPayload.role)) {
+      clearStoredCampusUser();
+      setUser(null);
+      return {
+        success: false,
+        error: 'The sign-in response was incomplete.'
+      };
+    }
+
+    const authenticatedUser = {
+      token: authPayload.token,
+      role: authPayload.role,
+      name: authPayload.name
+    };
+
+    persistCampusUser(authenticatedUser);
+    setUser(authenticatedUser);
+    return { success: true, role: authPayload.role };
+  };
+
+  const readErrorMessage = async (response, fallbackMessage) => {
+    const contentType = response.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+      const payload = await response.json();
+      return payload.message || payload.error || fallbackMessage;
+    }
+
+    const message = await response.text();
+    return message || fallbackMessage;
+  };
+
   const login = async (username, password) => {
     const resolvedCredentials = resolveCampusCredentials(username, password);
     const useDemoAccount = resolvedCredentials.success;
@@ -37,7 +70,7 @@ export const AuthProvider = ({ children }) => {
       ? resolvedCredentials.account.email
       : username.trim().toLowerCase();
     const loginPassword = useDemoAccount
-      ? resolvedCredentials.account.backendPassword
+      ? resolvedCredentials.account.password
       : password;
 
     try {
@@ -50,7 +83,10 @@ export const AuthProvider = ({ children }) => {
         })
       });
 
-      if (!response.ok) throw new Error('Login failed');
+      if (!response.ok) {
+        const errorMessage = await readErrorMessage(response, 'Login failed');
+        throw new Error(errorMessage);
+      }
 
       const data = await response.json();
 
@@ -64,24 +100,42 @@ export const AuthProvider = ({ children }) => {
         throw new Error('This account role is not supported in the campus portal.');
       }
 
-      const authenticatedUser = {
-        token: data.token,
-        role: data.role,
-        name: data.name
-      };
-
-      persistCampusUser(authenticatedUser);
-      setUser(authenticatedUser);
-      return { success: true, role: data.role };
+      return applyAuthenticatedUser(data);
     } catch (error) {
       return {
         success: false,
         error:
-          error.message === 'Login failed'
+          error.message === 'Login failed' || error.message === 'Invalid email or password.'
             ? useDemoAccount
               ? 'Unable to sign in with this campus account right now.'
               : 'Unable to sign in with this email and password.'
             : error.message
+      };
+    }
+  };
+
+  const exchangeOAuthCode = async (code) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/oauth/exchange`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
+
+      if (!response.ok) {
+        const errorMessage = await readErrorMessage(
+          response,
+          'The Google sign-in session is invalid or has expired.'
+        );
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      return applyAuthenticatedUser(data);
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message || 'The Google sign-in session is invalid or has expired.'
       };
     }
   };
@@ -92,7 +146,11 @@ export const AuthProvider = ({ children }) => {
     navigate('/', { replace: true });
   };
 
-  const value = { user, login, logout, loading };
+  const completeOAuthLogin = ({ token, role, name }) => {
+    return applyAuthenticatedUser({ token, role, name });
+  };
+
+  const value = { user, login, logout, loading, completeOAuthLogin, exchangeOAuthCode };
 
   return (
     <AuthContext.Provider value={value}>
