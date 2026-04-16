@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { ticketService } from '../../services/ticketService';
 import CreateTicketForm from '../../components/tickets/CreateTicketForm';
 import TicketDetailsCard from '../../components/tickets/TicketDetailsCard';
-import { Ticket, Clock, CheckCircle, XCircle, AlertCircle, Plus, Filter } from 'lucide-react';
+import { Ticket, Clock, CheckCircle, XCircle, AlertCircle, Plus, Filter, X } from 'lucide-react';
 
 export default function TicketUserView() {
   const { user } = useAuth();
@@ -19,6 +19,36 @@ export default function TicketUserView() {
   const isAdminOrManager = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_MANAGER';
   const isTechnician = user?.role === 'ROLE_TECHNICIAN';
   const isStudent = user?.role === 'ROLE_STUDENT';
+
+  // Set default view mode based on role
+  useEffect(() => {
+    if (isTechnician) {
+      setViewMode('assigned');
+    } else if (isStudent) {
+      setViewMode('my');
+    } else if (isAdminOrManager) {
+      setViewMode('my');
+    }
+  }, [user]);
+
+  // Apply local filters for Student and Technician
+  const applyLocalFilters = (tickets) => {
+    let filtered = [...tickets];
+    
+    if (filters.status) {
+      filtered = filtered.filter(t => t.status === filters.status);
+    }
+    if (filters.priority) {
+      filtered = filtered.filter(t => t.priority === filters.priority);
+    }
+    if (filters.category) {
+      filtered = filtered.filter(t => 
+        t.category?.toLowerCase().includes(filters.category.toLowerCase())
+      );
+    }
+    
+    return filtered;
+  };
 
   const fetchMyTickets = async () => {
     try {
@@ -47,6 +77,7 @@ export default function TicketUserView() {
     }
   };
 
+  // Initial fetch and when view mode changes
   useEffect(() => {
     if (activeTab === 'view') {
       if (viewMode === 'my') {
@@ -57,12 +88,39 @@ export default function TicketUserView() {
         fetchAllTickets();
       }
     }
-  }, [activeTab, viewMode, filters.status, filters.priority, filters.category]);
+  }, [activeTab, viewMode]);
+
+  // Re-fetch when filters change for Admin/Manager only (server-side)
+  useEffect(() => {
+    if (activeTab === 'view' && viewMode === 'all' && isAdminOrManager) {
+      fetchAllTickets();
+    }
+  }, [filters.status, filters.priority, filters.category]);
 
   const getDisplayTickets = () => {
-    if (viewMode === 'my') return myTickets;
-    if (viewMode === 'assigned') return assignedTickets;
-    return allTickets;
+    let tickets;
+    if (viewMode === 'my') tickets = myTickets;
+    else if (viewMode === 'assigned') tickets = assignedTickets;
+    else tickets = allTickets;
+    
+    // Apply local filters for Student and Technician
+    if ((isStudent && viewMode === 'my') || (isTechnician && viewMode === 'assigned')) {
+      return applyLocalFilters(tickets);
+    }
+    return tickets;
+  };
+
+  const hasActiveFilters = filters.status || filters.priority || filters.category;
+
+  const resetFilters = () => {
+    setFilters({ status: '', priority: '', category: '' });
+    if (viewMode === 'my') {
+      fetchMyTickets();
+    } else if (viewMode === 'assigned') {
+      fetchAssignedTickets();
+    } else if (viewMode === 'all') {
+      fetchAllTickets();
+    }
   };
 
   const getStatusConfig = (status) => {
@@ -99,10 +157,8 @@ export default function TicketUserView() {
   };
 
   const counts = getStatusCounts();
-
   const canCreateTicket = isStudent;
 
-  // Stat Cards Data
   const statCards = [
     { title: 'Total Tickets', value: counts.total, icon: <Ticket size={20} />, color: '#3b82f6', bg: '#eff6ff' },
     { title: 'Open', value: counts.open, icon: <AlertCircle size={20} />, color: '#0ea5e9', bg: '#e0f2fe' },
@@ -185,7 +241,7 @@ export default function TicketUserView() {
         gap: '16px',
         marginBottom: '24px'
       }}>
-        {/* View Mode Tabs */}
+        {/* View Mode Tabs - Role Specific */}
         <div style={{
           display: 'flex',
           background: 'var(--bg-card)',
@@ -193,25 +249,36 @@ export default function TicketUserView() {
           borderRadius: '12px',
           border: '1px solid var(--border-color)'
         }}>
-          <button
-            onClick={() => setViewMode('my')}
-            style={{
-              padding: '8px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '0.875rem',
-              background: viewMode === 'my' ? '#3b82f6' : 'transparent',
-              color: viewMode === 'my' ? 'white' : 'var(--text-muted)',
-              transition: 'all 0.2s'
-            }}
-          >
-            My Tickets
-          </button>
+          {/* Students see ONLY "My Tickets" */}
+          {isStudent && (
+            <button
+              onClick={() => {
+                setViewMode('my');
+                setFilters({ status: '', priority: '', category: '' });
+              }}
+              style={{
+                padding: '8px 20px',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '0.875rem',
+                background: viewMode === 'my' ? '#3b82f6' : 'transparent',
+                color: viewMode === 'my' ? 'white' : 'var(--text-muted)',
+                transition: 'all 0.2s'
+              }}
+            >
+              My Tickets
+            </button>
+          )}
+
+          {/* Technicians see ONLY "Assigned to Me" */}
           {isTechnician && (
             <button
-              onClick={() => setViewMode('assigned')}
+              onClick={() => {
+                setViewMode('assigned');
+                setFilters({ status: '', priority: '', category: '' });
+              }}
               style={{
                 padding: '8px 20px',
                 borderRadius: '8px',
@@ -227,52 +294,87 @@ export default function TicketUserView() {
               Assigned to Me
             </button>
           )}
+
+          {/* Admin/Manager see BOTH "My Tickets" and "All Tickets" */}
           {isAdminOrManager && (
-            <button
-              onClick={() => setViewMode('all')}
-              style={{
-                padding: '8px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                background: viewMode === 'all' ? '#3b82f6' : 'transparent',
-                color: viewMode === 'all' ? 'white' : 'var(--text-muted)',
-                transition: 'all 0.2s'
-              }}
-            >
-              All Tickets
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  setViewMode('my');
+                  setFilters({ status: '', priority: '', category: '' });
+                }}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '0.875rem',
+                  background: viewMode === 'my' ? '#3b82f6' : 'transparent',
+                  color: viewMode === 'my' ? 'white' : 'var(--text-muted)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                My Tickets
+              </button>
+              <button
+                onClick={() => {
+                  setViewMode('all');
+                  setFilters({ status: '', priority: '', category: '' });
+                }}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '0.875rem',
+                  background: viewMode === 'all' ? '#3b82f6' : 'transparent',
+                  color: viewMode === 'all' ? 'white' : 'var(--text-muted)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                All Tickets
+              </button>
+            </>
           )}
         </div>
 
         {/* Right side buttons */}
         <div style={{ display: 'flex', gap: '12px' }}>
-          {/* Filter Button */}
-          {isAdminOrManager && viewMode === 'all' && (
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
+          {/* Filter Button - For ALL roles */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              borderRadius: '10px',
+              border: `1px solid ${hasActiveFilters ? '#3b82f6' : 'var(--border-color)'}`,
+              background: hasActiveFilters ? '#eff6ff' : 'var(--bg-card)',
+              color: hasActiveFilters ? '#3b82f6' : 'var(--text-primary)',
+              cursor: 'pointer',
+              fontWeight: '500',
+              fontSize: '0.875rem'
+            }}
+          >
+            <Filter size={16} />
+            Filters
+            {hasActiveFilters && (
+              <span style={{
+                background: '#3b82f6',
+                color: 'white',
                 borderRadius: '10px',
-                border: '1px solid var(--border-color)',
-                background: 'var(--bg-card)',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                fontWeight: '500',
-                fontSize: '0.875rem'
-              }}
-            >
-              <Filter size={16} />
-              Filters
-            </button>
-          )}
+                padding: '2px 6px',
+                fontSize: '0.7rem'
+              }}>
+                Active
+              </span>
+            )}
+          </button>
 
-          {/* Create Ticket Button */}
+          {/* Create Ticket Button - Only for Students */}
           {canCreateTicket && (
             <button
               onClick={() => setActiveTab(activeTab === 'create' ? 'view' : 'create')}
@@ -298,8 +400,49 @@ export default function TicketUserView() {
         </div>
       </div>
 
+      {/* Active Filters Display */}
+      {hasActiveFilters && (
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '8px',
+          marginBottom: '16px'
+        }}>
+          {filters.status && (
+            <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: '500' }}>
+              Status: {filters.status}
+            </span>
+          )}
+          {filters.priority && (
+            <span style={{ background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: '500' }}>
+              Priority: {filters.priority}
+            </span>
+          )}
+          {filters.category && (
+            <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: '500' }}>
+              Category: {filters.category}
+            </span>
+          )}
+          <button
+            onClick={resetFilters}
+            style={{
+              background: '#fee2e2',
+              color: '#dc2626',
+              padding: '4px 10px',
+              borderRadius: '20px',
+              fontSize: '0.7rem',
+              fontWeight: '500',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            Clear All
+          </button>
+        </div>
+      )}
+
       {/* Filters Panel */}
-      {showFilters && viewMode === 'all' && activeTab === 'view' && (
+      {showFilters && activeTab === 'view' && (
         <div style={{
           background: 'var(--bg-card)',
           padding: '20px',
@@ -307,6 +450,24 @@ export default function TicketUserView() {
           marginBottom: '20px',
           border: '1px solid var(--border-color)'
         }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
+              Filter Tickets
+            </h4>
+            <button
+              onClick={() => setShowFilters(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                fontSize: '0.75rem'
+              }}
+            >
+              Close
+            </button>
+          </div>
+          
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ flex: 1, minWidth: '150px' }}>
               <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>STATUS</label>
@@ -339,25 +500,27 @@ export default function TicketUserView() {
             </div>
             <div style={{ flex: 1, minWidth: '150px' }}>
               <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>CATEGORY</label>
-              <input
-                type="text"
-                placeholder="e.g., Plumbing, Electrical"
+              <select
                 value={filters.category}
                 onChange={(e) => setFilters({ ...filters, category: e.target.value })}
                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-alt)', color: 'var(--text-primary)' }}
-              />
+              >
+                <option value="">All Categories</option>
+                <option value="PLUMBING">Plumbing</option>
+                <option value="ELECTRICAL">Electrical</option>
+                <option value="IT_EQUIPMENT">IT / Equipment</option>
+                <option value="CLEANING">Cleaning</option>
+                <option value="OTHER">Other</option>
+              </select>
             </div>
+          </div>
+          
+          <div style={{ marginTop: '16px', textAlign: 'right' }}>
             <button
-              onClick={() => fetchAllTickets()}
-              style={{ padding: '10px 20px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}
+              onClick={() => setShowFilters(false)}
+              style={{ padding: '8px 20px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}
             >
-              Apply Filters
-            </button>
-            <button
-              onClick={() => { setFilters({ status: '', priority: '', category: '' }); fetchAllTickets(); }}
-              style={{ padding: '10px 20px', background: 'var(--bg-alt)', color: 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}
-            >
-              Clear
+              Done
             </button>
           </div>
         </div>
@@ -417,9 +580,10 @@ export default function TicketUserView() {
                   <Ticket size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
                   <p style={{ fontSize: '1.1rem', marginBottom: '8px' }}>No tickets found</p>
                   <p style={{ fontSize: '0.875rem' }}>
-                    {isStudent && 'Click "Create Ticket" to report an issue.'}
-                    {isTechnician && 'No tickets have been assigned to you yet.'}
-                    {isAdminOrManager && 'No tickets have been submitted yet.'}
+                    {hasActiveFilters ? 'Try clearing your filters to see more tickets.' :
+                      (isStudent ? 'Click "Create Ticket" to report an issue.' : 
+                       isTechnician ? 'No tickets have been assigned to you yet.' : 
+                       'No tickets have been submitted yet.')}
                   </p>
                 </div>
               ) : (
@@ -450,7 +614,7 @@ export default function TicketUserView() {
                       {/* Ticket Info */}
                       <div>
                         <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
-                          #{ticket.id} - {ticket.category}
+                          {ticket.category}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                           {ticket.locationText || 'No location'} • {new Date(ticket.createdAt).toLocaleDateString()}

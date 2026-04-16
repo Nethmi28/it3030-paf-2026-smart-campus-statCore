@@ -11,9 +11,11 @@ import { useAuth } from '../../contexts/AuthContext';
 const AuthenticatedImage = ({ name, id }) => {
     const [imgSrc, setImgSrc] = useState(null);
     const [error, setError] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchImg = async () => {
+            setLoading(true);
             try {
                 const token = localStorage.getItem('token');
                 const response = await fetch(`http://localhost:8089/api/tickets/attachments/${id}`, {
@@ -21,25 +23,64 @@ const AuthenticatedImage = ({ name, id }) => {
                 });
                 if (response.ok) {
                     const blob = await response.blob();
-                    setImgSrc(URL.createObjectURL(blob));
+                    const url = URL.createObjectURL(blob);
+                    setImgSrc(url);
                 } else {
                     setError(true);
                 }
             } catch (err) {
                 console.error("Failed to load image", err);
                 setError(true);
+            } finally {
+                setLoading(false);
             }
         };
         fetchImg();
+        
+        // Cleanup
+        return () => {
+            if (imgSrc) {
+                URL.revokeObjectURL(imgSrc);
+            }
+        };
     }, [id]);
 
-    if (error) {
-        return <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '0.75rem' }}>Failed to load image</div>;
+    if (loading) {
+        return (
+            <div style={{ 
+                background: '#f1f5f9', 
+                borderRadius: '12px', 
+                height: '160px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                border: '1px solid #e2e8f0'
+            }}>
+                <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Loading...</div>
+            </div>
+        );
     }
 
-    if (!imgSrc) return <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '0.75rem' }}>Loading image...</div>;
+    if (error) {
+        return (
+            <div style={{ 
+                background: '#fef2f2', 
+                borderRadius: '12px', 
+                height: '160px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                border: '1px solid #fee2e2'
+            }}>
+                <div style={{ color: '#ef4444', fontSize: '0.75rem', textAlign: 'center' }}>
+                    Failed to load<br />{name.length > 20 ? name.substring(0, 20) + '...' : name}
+                </div>
+            </div>
+        );
+    }
 
     const baseName = name.split('.').slice(0, -1).join('.') || name;
+    const displayName = baseName.length > 25 ? baseName.substring(0, 25) + '...' : baseName;
 
     return (
         <div style={{
@@ -52,20 +93,45 @@ const AuthenticatedImage = ({ name, id }) => {
             border: '1px solid #e2e8f0',
             transition: 'transform 0.2s, box-shadow 0.2s'
         }}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-            }}>
+        onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
+        }}
+        onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+        }}>
             <a href={imgSrc} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
-                <img src={imgSrc} alt={name} style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }} />
+                <img 
+                    src={imgSrc} 
+                    alt={name} 
+                    style={{ 
+                        width: '100%', 
+                        height: '160px', 
+                        objectFit: 'cover', 
+                        display: 'block',
+                        backgroundColor: '#f1f5f9'
+                    }} 
+                />
             </a>
-            <div style={{ padding: '12px', textAlign: 'center', background: 'white', borderTop: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '0.8rem', color: '#3b82f6', fontWeight: '500', marginBottom: '4px' }}>{baseName}</div>
-                <a href={imgSrc} download style={{ fontSize: '0.7rem', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', textDecoration: 'none' }}>
+            <div style={{ padding: '10px 12px', textAlign: 'center', background: 'white', borderTop: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: '500', marginBottom: '4px' }}>
+                    {displayName}
+                </div>
+                <a 
+                    href={imgSrc} 
+                    download={name}
+                    style={{ 
+                        fontSize: '0.65rem', 
+                        color: '#64748b', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        gap: '4px', 
+                        textDecoration: 'none',
+                        cursor: 'pointer'
+                    }}
+                >
                     <Download size={12} /> Download
                 </a>
             </div>
@@ -94,6 +160,7 @@ export default function TicketDetailsCard({ ticket, onBack, onTicketUpdate }) {
 
     const isAdminOrManager = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_MANAGER';
     const isTechnician = user?.role === 'ROLE_TECHNICIAN';
+    const isStudent = user?.role === 'ROLE_STUDENT';
     const isTicketOwner = ticket.reportedById === user?.id;
     const isAssignedTechnician = ticket.assignedToId === user?.id;
 
@@ -268,11 +335,8 @@ export default function TicketDetailsCard({ ticket, onBack, onTicketUpdate }) {
     const canUpdateStatus = isTechnician || isAdminOrManager;
     const canAssignTechnician = isAdminOrManager && ticket.status !== 'CLOSED' && ticket.status !== 'REJECTED';
     const canReject = isAdminOrManager && ticket.status === 'OPEN';
-    const canDelete = isAdminOrManager;
+    const canDelete = (isStudent && isTicketOwner && ticket.status === 'OPEN') || isAdminOrManager;
     const canComment = true;
-    const isCommentEditable = (commentAuthorId) => {
-        return commentAuthorId === user?.id || isAdminOrManager;
-    };
 
     const DetailItem = ({ icon, label, value, color = '#64748b' }) => (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 0', borderBottom: '1px solid #e2e8f0' }}>
@@ -321,7 +385,8 @@ export default function TicketDetailsCard({ ticket, onBack, onTicketUpdate }) {
                     <div style={{ display: 'flex', gap: '10px' }}>
                         {canDelete && (
                             <button onClick={handleDeleteTicket} style={{ background: '#dc2626', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Trash2 size={14} /> Delete
+                                <Trash2 size={14} /> 
+                                {isStudent && ticket.status === 'OPEN' ? 'Cancel Ticket' : 'Delete Ticket'}
                             </button>
                         )}
                     </div>
@@ -409,8 +474,8 @@ export default function TicketDetailsCard({ ticket, onBack, onTicketUpdate }) {
                                 ) : (
                                     comments.map((c) => {
                                         const isMe = user?.id === c.authorId;
-                                        const canEdit = isCommentEditable(c.authorId);
-                                        const canDelete = isCommentEditable(c.authorId);
+                                        const canEdit = c.canEdit;
+                                        const canDelete = c.canDelete;
                                         const isEditing = editingCommentId === c.id;
 
                                         return (
@@ -550,7 +615,7 @@ export default function TicketDetailsCard({ ticket, onBack, onTicketUpdate }) {
                             </div>
                         )}
 
-                        {/* Attachments Card */}
+                        {/* Attachments Card - IMPROVED GRID VERSION */}
                         <div style={{ background: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
                             <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: '600', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Paperclip size={16} color="#8b5cf6" /> Attachments ({ticket.attachmentNames?.length || 0})
@@ -561,17 +626,44 @@ export default function TicketDetailsCard({ ticket, onBack, onTicketUpdate }) {
                                     <p>No attachments uploaded</p>
                                 </div>
                             ) : (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
+                                <div style={{ 
+                                    display: 'grid', 
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', 
+                                    gap: '16px' 
+                                }}>
                                     {ticket.attachmentNames.map((name, index) => {
                                         const id = ticket.attachmentIds[index];
-                                        const isImage = name.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null;
+                                        const isImage = name.match(/\.(jpeg|jpg|gif|png|webp|jfif)$/i) != null;
                                         return isImage ? (
                                             <AuthenticatedImage key={index} id={id} name={name} />
                                         ) : (
                                             <a href={`http://localhost:8089/api/tickets/attachments/${id}`} target="_blank" rel="noreferrer" key={index} style={{ textDecoration: 'none' }}>
-                                                <div style={{ padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: '#f8fafc', transition: 'all 0.2s' }}>
-                                                    <Paperclip size={16} color="#3b82f6" />
-                                                    <span style={{ fontSize: '0.8rem', color: '#3b82f6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                                                <div style={{ 
+                                                    padding: '16px', 
+                                                    border: '1px solid #e2e8f0', 
+                                                    borderRadius: '12px', 
+                                                    display: 'flex', 
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center', 
+                                                    gap: '10px', 
+                                                    cursor: 'pointer', 
+                                                    background: '#f8fafc', 
+                                                    transition: 'all 0.2s',
+                                                    textAlign: 'center'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = '#eff6ff';
+                                                    e.currentTarget.style.borderColor = '#3b82f6';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = '#f8fafc';
+                                                    e.currentTarget.style.borderColor = '#e2e8f0';
+                                                }}>
+                                                    <FileImage size={32} color="#3b82f6" />
+                                                    <span style={{ fontSize: '0.75rem', color: '#3b82f6', wordBreak: 'break-word' }}>
+                                                        {name.length > 30 ? name.substring(0, 30) + '...' : name}
+                                                    </span>
+                                                    <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Click to view</span>
                                                 </div>
                                             </a>
                                         );
