@@ -14,6 +14,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import { CAMPUS_ACCOUNTS, getDashboardPathForRole } from '../../utils/campusAuth';
+import ThemeToggle from '../../components/common/ThemeToggle';
 
 export default function LoginPage() {
   const [form, setForm] = useState({ username: '', password: '' });
@@ -160,16 +161,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #e0f2fe 0%, #f8fafc 45%, #eef2ff 100%)', padding: '24px' }}>
-      <div style={{ background: 'white', padding: '40px', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.18)', width: '100%', maxWidth: '1020px', display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '32px' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--page-gradient)', padding: '24px', position: 'relative', transition: 'background 0.3s ease' }}>
+      <div style={{ position: 'absolute', top: '24px', right: '24px' }}>
+        <ThemeToggle />
+      </div>
+
+      <div style={{ background: 'var(--bg-card)', padding: '40px', borderRadius: '24px', boxShadow: 'var(--shadow)', border: '1px solid var(--border-color)', width: '100%', maxWidth: '1020px', display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '32px', transition: 'background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease' }}>
         
         <div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', background: '#eff6ff', color: '#1d4ed8', padding: '10px 16px', borderRadius: '999px', fontSize: '0.85rem', fontWeight: 700, marginBottom: '20px' }}>
             <School size={18} />
             FACILIO CAMPUS ACCESS
           </div>
-          <h1 style={{ fontSize: '2.3rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.1, marginBottom: '12px' }}>Sign in with your assigned campus credentials</h1>
-          <p style={{ color: '#475569', lineHeight: 1.7, marginBottom: '28px', maxWidth: '560px' }}>
+          <h1 style={{ fontSize: '2.3rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.1, marginBottom: '12px' }}>Sign in with your assigned campus credentials</h1>
+          <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '28px', maxWidth: '560px' }}>
             Each role now uses a unique username and password pair. This keeps the login flow closer to a real campus portal instead of letting anyone jump into a dashboard with a single click.
           </p>
 
@@ -198,8 +203,8 @@ export default function LoginPage() {
                     {iconMap[account.role]}
                   </div>
                   <div>
-                    <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>{account.title}</div>
-                    <div style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '10px' }}>{account.subtitle}</div>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>{account.title}</div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '10px' }}>{account.subtitle}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', fontSize: '0.8rem' }}>
                       <span style={{ background: 'white', color: '#334155', padding: '6px 10px', borderRadius: '999px', fontFamily: 'monospace' }}>
                         {account.username}
@@ -219,14 +224,14 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div style={{ background: '#f8fafc', borderRadius: '20px', padding: '28px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div style={{ background: 'var(--bg-alt)', borderRadius: '20px', padding: '28px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', transition: 'background-color 0.3s ease, border-color 0.3s ease' }}>
           <div>
             <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-              <div style={{ display: 'inline-flex', background: '#0f172a', color: 'white', padding: '14px', borderRadius: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'inline-flex', background: 'var(--accent)', color: 'var(--accent-text)', padding: '14px', borderRadius: '16px', marginBottom: '16px' }}>
                 <Lock size={28} />
               </div>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>Campus Login</h2>
-              <p style={{ color: '#64748b', fontSize: '0.95rem' }}>Use your campus username, or sign in with your approved university email and password after the admin grants access.</p>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>Campus Login</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Use your campus username, or sign in with your approved university email and password after the admin grants access.</p>
             </div>
 
             {error && (
@@ -237,7 +242,7 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#334155', fontWeight: 600 }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                   Username
                   <input
                     name="username"
@@ -245,11 +250,11 @@ export default function LoginPage() {
                     onChange={handleInputChange}
                     placeholder="e.g. mg.ghettiarchhi or cu1234567@fcu.lk"
                     autoComplete="username"
-                    style={{ border: '1px solid #cbd5e1', borderRadius: '12px', padding: '14px 16px', fontSize: '0.95rem', outline: 'none', background: 'white' }}
+                    style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '14px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
                   />
                 </label>
 
-                <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#334155', fontWeight: 600 }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                   Password
                   <div style={{ position: 'relative' }}>
                     <input
@@ -259,13 +264,13 @@ export default function LoginPage() {
                       onChange={handleInputChange}
                       placeholder="Enter your password"
                       autoComplete="current-password"
-                      style={{ border: '1px solid #cbd5e1', borderRadius: '12px', padding: '14px 52px 14px 16px', fontSize: '0.95rem', outline: 'none', background: 'white', width: '100%' }}
+                      style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '14px 52px 14px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)', width: '100%' }}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((current) => !current)}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}
+                      style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -291,14 +296,14 @@ export default function LoginPage() {
               </div>
             </form>
 
-            <div style={{ marginTop: '18px', padding: '18px', borderRadius: '16px', background: '#ffffff', border: '1px solid #dbeafe' }}>
+            <div style={{ marginTop: '18px', padding: '18px', borderRadius: '16px', background: 'var(--bg-card)', border: '1px solid rgba(59, 130, 246, 0.22)', transition: 'background-color 0.3s ease' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '14px' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1d4ed8', fontWeight: 800, marginBottom: '6px' }}>
                     <UserPlus size={18} />
                     New Student Access
                   </div>
-                  <p style={{ margin: 0, color: '#475569', fontSize: '0.9rem', lineHeight: 1.6 }}>
+                  <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>
                     If you are a new student and still do not have website access, send a request to create your account.
                   </p>
                 </div>
@@ -340,18 +345,18 @@ export default function LoginPage() {
                       </div>
                     )}
 
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#334155', fontWeight: 600 }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                       Full Name
                       <input
                         name="fullName"
                         value={requestForm.fullName}
                         onChange={handleRequestInputChange}
                         placeholder="Enter your full name"
-                        style={{ border: '1px solid #cbd5e1', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'white' }}
+                        style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
                       />
                     </label>
 
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#334155', fontWeight: 600 }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                       University Email
                       <input
                         name="email"
@@ -359,33 +364,33 @@ export default function LoginPage() {
                         value={requestForm.email}
                         onChange={handleRequestInputChange}
                         placeholder="e.g. cu1234567@fcu.lk"
-                        style={{ border: '1px solid #cbd5e1', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'white' }}
+                        style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
                       />
                     </label>
 
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#334155', fontWeight: 600 }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                       Student ID
                       <input
                         name="studentId"
                         value={requestForm.studentId}
                         onChange={handleRequestInputChange}
                         placeholder="e.g. CU2354675"
-                        style={{ border: '1px solid #cbd5e1', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'white' }}
+                        style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
                       />
                     </label>
 
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#334155', fontWeight: 600 }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                       Faculty
                       <input
                         name="faculty"
                         value={requestForm.faculty}
                         onChange={handleRequestInputChange}
                         placeholder="e.g. Computing"
-                        style={{ border: '1px solid #cbd5e1', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'white' }}
+                        style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
                       />
                     </label>
 
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#334155', fontWeight: 600 }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                       Note (Optional)
                       <textarea
                         name="note"
@@ -393,7 +398,7 @@ export default function LoginPage() {
                         onChange={handleRequestInputChange}
                         placeholder="Add any details the admin team should know"
                         rows={3}
-                        style={{ border: '1px solid #cbd5e1', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'white', resize: 'vertical', fontFamily: 'inherit' }}
+                        style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)', resize: 'vertical', fontFamily: 'inherit' }}
                       />
                     </label>
 
@@ -419,21 +424,21 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
-            <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
+          <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid var(--border-color)' }}>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
               Development Setup
             </p>
             <button
               onClick={handleCreateTestUser}
-              style={{ background: '#e2e8f0', border: 'none', color: '#334155', fontSize: '0.9rem', padding: '10px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, width: '100%' }}
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.9rem', padding: '10px 16px', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, width: '100%' }}
             >
               Seed Backend Test Accounts
             </button>
-            <p style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '10px', lineHeight: 1.6 }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '10px', lineHeight: 1.6 }}>
               Run this once if the seeded backend users have not been created yet.
             </p>
             {location.state?.from?.pathname && (
-              <p style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: '10px', lineHeight: 1.6 }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '10px', lineHeight: 1.6 }}>
                 After sign-in, you will be sent back to the page you originally tried to open.
               </p>
             )}

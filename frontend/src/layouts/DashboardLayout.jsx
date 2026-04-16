@@ -3,6 +3,7 @@ import {
 } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import ThemeToggle from '../components/common/ThemeToggle';
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
@@ -68,10 +69,21 @@ export default function DashboardLayout() {
               to={`/dashboard${item.id ? '/' + item.id : ''}`}
               end={item.exact}
               style={({ isActive }) => ({
-                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', width: '100%',
-                background: isActive ? 'var(--bg-alt)' : 'transparent', color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                border: 'none', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', fontWeight: '500',
-                transition: 'background 0.2s', textDecoration: 'none'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '14px 16px',
+                width: '100%',
+                background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
+                color: isActive ? 'var(--sidebar-active-text)' : 'var(--text-muted)',
+                border: isActive ? '1px solid var(--sidebar-active-border)' : '1px solid transparent',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontWeight: isActive ? '600' : '500',
+                boxShadow: isActive ? '0 12px 24px rgba(37, 99, 235, 0.14)' : 'none',
+                transition: 'background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+                textDecoration: 'none'
               })}
             >
               {item.icon}
@@ -79,19 +91,47 @@ export default function DashboardLayout() {
             </NavLink>
           ))}
         </div>
+
+        <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)' }}>
+          <button
+            onClick={logout}
+            title="Logout"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              width: '100%',
+              padding: '14px 16px',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'transparent',
+              color: '#ef4444',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '0.95rem',
+              textAlign: 'left',
+              transition: 'color 0.2s ease'
+            }}
+          >
+            <LogOut size={18} />
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Main Content Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
 
         {/* Topbar */}
-        <div style={{ background: 'var(--bg-color)', padding: '16px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', zIndex: 10 }}>
+        <div style={{ background: 'var(--bg-color)', padding: '16px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', zIndex: 10 }}>
           <div>
             <h1 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '4px' }}>Welcome back, {currentUser.name.split(' ')[0]}</h1>
             <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{new Date().toLocaleDateString()}</div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <ThemeToggle />
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#3b82f6', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '600', fontSize: '1rem' }}>
                 {currentUser.name.charAt(0)}
@@ -102,14 +142,6 @@ export default function DashboardLayout() {
                   {currentUser.role.replace('ROLE_', '')}
                 </div>
               </div>
-
-              <button
-                onClick={logout}
-                title="Logout"
-                style={{ background: '#fee2e2', border: '1px solid #f87171', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', borderRadius: '8px', color: '#ef4444', marginLeft: '12px', transition: 'all 0.2s' }}
-              >
-                <LogOut size={18} />
-              </button>
             </div>
           </div>
         </div>

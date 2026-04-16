@@ -1,9 +1,57 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { Plus, Wrench, Calendar, Clock, CheckCircle, ArrowRight } from 'lucide-react';
+import { Plus, Wrench, Calendar, Clock, CheckCircle, ArrowRight, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { bookingService } from '../../../services/bookingService';
+import { ticketService } from '../../../services/ticketService';
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [stats, setStats] = useState({ totalBookings: 0, pendingBookings: 0, openTickets: 0, resolvedTickets: 0 });
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [recentTickets, setRecentTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStudentData = async () => {
+      if (!user?.token) return;
+      setLoading(true);
+      try {
+        const [bookings, tickets] = await Promise.all([
+          bookingService.getMyBookings(user.token),
+          ticketService.getMyTickets(user.token)
+        ]);
+
+        const pendingB = bookings.filter(b => b.status === 'PENDING').length;
+        const openT = tickets.filter(t => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length;
+        const resolvedT = tickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED').length;
+
+        setStats({
+          totalBookings: bookings.length,
+          pendingBookings: pendingB,
+          openTickets: openT,
+          resolvedTickets: resolvedT
+        });
+        setRecentBookings(bookings.slice(0, 3));
+        setRecentTickets(tickets.slice(0, 3));
+      } catch (err) {
+        console.error("Student dashboard fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStudentData();
+  }, [user?.token]);
+
+  if (loading) {
+    return (
+      <div style={{ padding: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+        <Loader2 size={40} className="animate-spin" style={{ color: '#1e3a8a' }} />
+        <p style={{ color: '#64748b' }}>Loading your dashboard...</p>
+      </div>
+    );
+  }
   
   return (
     <div style={{ padding: '24px 32px', maxWidth: '1400px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
@@ -29,10 +77,18 @@ export default function StudentDashboard() {
           Here's an overview of your campus activity.
         </p>
         <div style={{ display: 'flex', gap: '16px' }}>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', color: '#1e3a8a', border: 'none', padding: '10px 20px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+          <button 
+            onClick={() => navigate('/dashboard/bookings', { state: { action: 'create' } })}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', color: '#1e3a8a', border: 'none', padding: '10px 20px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
+          >
             <Plus size={18} /> New Booking
           </button>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.1)', color: 'white', border: '1px solid rgba(255, 255, 255, 0.3)', padding: '10px 20px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', backdropFilter: 'blur(4px)', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'} onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}>
+          <button 
+            onClick={() => navigate('/dashboard/tickets')}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.1)', color: 'white', border: '1px solid rgba(255, 255, 255, 0.3)', padding: '10px 20px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: '600', cursor: 'pointer', backdropFilter: 'blur(4px)', transition: 'background 0.2s' }} 
+            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'} 
+            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+          >
             <Wrench size={18} /> Report Issue
           </button>
         </div>
@@ -45,7 +101,7 @@ export default function StudentDashboard() {
             <Calendar size={24} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', lineHeight: 1 }}>3</h3>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', lineHeight: 1 }}>{stats.totalBookings}</h3>
             <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '6px', fontWeight: '500' }}>Total Bookings</p>
           </div>
         </div>
@@ -55,7 +111,7 @@ export default function StudentDashboard() {
             <Clock size={24} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', lineHeight: 1 }}>1</h3>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', lineHeight: 1 }}>{stats.pendingBookings}</h3>
             <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '6px', fontWeight: '500' }}>Pending Bookings</p>
           </div>
         </div>
@@ -65,7 +121,7 @@ export default function StudentDashboard() {
             <Wrench size={24} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', lineHeight: 1 }}>1</h3>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', lineHeight: 1 }}>{stats.openTickets}</h3>
             <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '6px', fontWeight: '500' }}>Open Tickets</p>
           </div>
         </div>
@@ -75,7 +131,7 @@ export default function StudentDashboard() {
             <CheckCircle size={24} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', lineHeight: 1 }}>1</h3>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0f172a', lineHeight: 1 }}>{stats.resolvedTickets}</h3>
             <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: '6px', fontWeight: '500' }}>Resolved Tickets</p>
           </div>
         </div>
@@ -93,27 +149,24 @@ export default function StudentDashboard() {
             </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h4 style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#0f172a' }}>Innovation Lab A</h4>
-                <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '4px' }}>2026-04-10 • 09:00 - 11:00</p>
+            {recentBookings.length === 0 ? (
+              <p style={{ color: '#64748b', fontSize: '0.875rem', textAlign: 'center', padding: '20px' }}>No recent bookings</p>
+            ) : recentBookings.map(bk => (
+              <div key={bk.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h4 style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#0f172a' }}>{bk.resourceName}</h4>
+                  <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '4px' }}>{bk.bookingDate} • {bk.startTime} - {bk.endTime}</p>
+                </div>
+                <span style={{ 
+                  fontSize: '0.75rem', fontWeight: '700', 
+                  color: bk.status === 'APPROVED' ? '#166534' : bk.status === 'REJECTED' ? '#991b1b' : '#9a3412', 
+                  background: bk.status === 'APPROVED' ? '#dcfce7' : bk.status === 'REJECTED' ? '#fee2e2' : '#ffedd5', 
+                  padding: '6px 12px', borderRadius: '6px', letterSpacing: '0.025em' 
+                }}>
+                  {bk.status === 'APPROVED' ? 'ACCEPTED' : bk.status}
+                </span>
               </div>
-              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#166534', background: '#dcfce7', padding: '6px 12px', borderRadius: '6px', letterSpacing: '0.025em' }}>APPROVED</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h4 style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#0f172a' }}>Grand Conference Hall</h4>
-                <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '4px' }}>2026-04-12 • 14:00 - 16:00</p>
-              </div>
-              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#9a3412', background: '#ffedd5', padding: '6px 12px', borderRadius: '6px', letterSpacing: '0.025em' }}>PENDING</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h4 style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#0f172a' }}>Sports Complex Gym</h4>
-                <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '4px' }}>2026-04-09 • 07:00 - 08:30</p>
-              </div>
-              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#991b1b', background: '#fee2e2', padding: '6px 12px', borderRadius: '6px', letterSpacing: '0.025em' }}>REJECTED</span>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -126,20 +179,24 @@ export default function StudentDashboard() {
             </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h4 style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#0f172a' }}>Broken projector in Lab A</h4>
-                <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '4px' }}>Equipment • HIGH</p>
+            {recentTickets.length === 0 ? (
+              <p style={{ color: '#64748b', fontSize: '0.875rem', textAlign: 'center', padding: '20px' }}>No recent tickets</p>
+            ) : recentTickets.map(tk => (
+              <div key={tk.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h4 style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#0f172a' }}>{tk.category}: {tk.description.substring(0, 30)}...</h4>
+                  <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '4px' }}>{tk.priority} Priority</p>
+                </div>
+                <span style={{ 
+                  fontSize: '0.75rem', fontWeight: '700', 
+                  color: tk.status === 'RESOLVED' || tk.status === 'CLOSED' ? '#166534' : '#9a3412', 
+                  background: tk.status === 'RESOLVED' || tk.status === 'CLOSED' ? '#dcfce7' : '#ffedd5', 
+                  padding: '6px 12px', borderRadius: '6px', letterSpacing: '0.025em' 
+                }}>
+                  {tk.status}
+                </span>
               </div>
-              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#9a3412', background: '#ffedd5', padding: '6px 12px', borderRadius: '6px', letterSpacing: '0.025em' }}>IN PROGRESS</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h4 style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#0f172a' }}>Leaking faucet in restroom</h4>
-                <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '4px' }}>Plumbing • MEDIUM</p>
-              </div>
-              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#166534', background: '#dcfce7', padding: '6px 12px', borderRadius: '6px', letterSpacing: '0.025em' }}>RESOLVED</span>
-            </div>
+            ))}
           </div>
         </div>
 
