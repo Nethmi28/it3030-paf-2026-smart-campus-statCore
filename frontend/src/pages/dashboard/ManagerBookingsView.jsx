@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { bookingService } from '../../services/bookingService';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { ArrowLeft, CheckCircle, XCircle, Clock, Search, FileText } from 'lucide-react';
+import { formatBookingRange } from '../../utils/bookingTime';
 
 const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8089';
 
 export default function ManagerBookingsView() {
   const { user } = useAuth();
+  const { showToast, showPrompt } = useToast();
   const [bookings, setBookings] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [loadError, setLoadError] = useState('');
@@ -23,8 +27,12 @@ export default function ManagerBookingsView() {
     setLoading(true);
     setLoadError('');
     try {
-      const data = await bookingService.getAllBookings(user.token);
+      const [data, auditData] = await Promise.all([
+        bookingService.getAllBookings(user.token),
+        bookingService.getAuditLogs(user.token),
+      ]);
       setBookings(data);
+      setAuditLogs(auditData);
     } catch (err) {
       console.error('Failed to fetch bookings', err);
       setLoadError(err.message || 'Unable to load bookings right now.');
@@ -44,25 +52,58 @@ export default function ManagerBookingsView() {
 
   const handleStatusUpdate = async (id, status) => {
     let reason = '';
+
     if (status === 'REJECTED') {
-      const input = prompt("Please provide a reason for rejection:");
-      if (input === null) return; // cancelled
+      const input = await showPrompt({
+        title: 'Reject Booking',
+        message: 'Please provide a reason for rejecting this booking request.',
+        placeholder: 'Enter rejection reason',
+        confirmLabel: 'Reject Booking',
+        cancelLabel: 'Keep Pending',
+        confirmTone: 'danger',
+        required: true,
+      });
+
+      if (input === null) return;
+
       reason = input.trim();
+
       if (!reason) {
-        alert("A reason is required for rejection.");
+        showToast({
+          variant: 'warning',
+          title: 'Reason Required',
+          message: 'A reason is required for rejection.',
+        });
         return;
       }
     }
     
     try {
       await bookingService.updateStatus(user.token, id, { status, adminReason: reason });
-      alert(`Booking has been ${status.toLowerCase()} successfully!`);
+      showToast({
+        variant: 'success',
+        title: status === 'APPROVED' ? 'Booking Approved' : 'Booking Rejected',
+        message: status === 'APPROVED'
+          ? 'The booking has been approved successfully.'
+          : 'The booking has been rejected successfully.',
+      });
       // Update selected booking preview dynamically
       setSelectedBooking(prev => prev ? { ...prev, status, adminReason: reason } : null);
       fetchBookings();
     } catch (err) {
-      alert(`Failed to update status: ${err.message}`);
+      showToast({
+        variant: 'error',
+        title: 'Update Failed',
+        message: err.message || 'Failed to update the booking status.',
+      });
     }
+  };
+
+  const formatAuditTimestamp = (timestamp) => {
+    if (!timestamp) {
+      return '';
+    }
+    return new Date(timestamp).toLocaleString();
   };
 
   if (selectedBooking) {
@@ -98,6 +139,7 @@ export default function ManagerBookingsView() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.9rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Requester Name:</span> <span style={{ fontWeight: '500' }}>{selectedBooking.userName}</span></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Requester ID:</span> <span style={{ fontWeight: '500' }}>{selectedBooking.userId}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}><span style={{ color: 'var(--text-muted)' }}>Requester Email:</span> <span style={{ fontWeight: '500', textAlign: 'right', wordBreak: 'break-word' }}>{selectedBooking.userEmail || 'Not available'}</span></div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Booking Purpose:</span>
                       <span style={{ fontWeight: '500', background: 'var(--bg-alt)', padding: '12px', borderRadius: '8px' }}>{selectedBooking.purpose}</span>
@@ -112,7 +154,7 @@ export default function ManagerBookingsView() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.9rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Resource:</span> <span style={{ fontWeight: '500' }}>{selectedBooking.resourceName}</span></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Date:</span> <span style={{ fontWeight: '500' }}>{selectedBooking.bookingDate}</span></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Time Slot:</span> <span style={{ fontWeight: '500' }}>{selectedBooking.startTime} - {selectedBooking.endTime}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Time Slot:</span> <span style={{ fontWeight: '500' }}>{formatBookingRange(selectedBooking.startTime, selectedBooking.endTime)}</span></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Expected Attendees:</span> <span style={{ fontWeight: '500' }}>{selectedBooking.expectedAttendees}</span></div>
                     
                     {selectedBooking.additionalRequirements && (
@@ -219,7 +261,7 @@ export default function ManagerBookingsView() {
                       <td style={{ padding: '16px' }}>{bk.userName}</td>
                       <td style={{ padding: '16px' }}>{bk.resourceName}</td>
                       <td style={{ padding: '16px', color: 'var(--text-muted)' }}>{bk.bookingDate}</td>
-                      <td style={{ padding: '16px', color: 'var(--text-muted)' }}>{bk.startTime}-{bk.endTime}</td>
+                      <td style={{ padding: '16px', color: 'var(--text-muted)' }}>{formatBookingRange(bk.startTime, bk.endTime)}</td>
                       <td style={{ padding: '16px' }}>
                         <span style={{
                           padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700',
@@ -243,6 +285,45 @@ export default function ManagerBookingsView() {
               </table>
             </div>
           )}
+      </div>
+
+      <div style={activeCardStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', gap: '16px', flexWrap: 'wrap' }}>
+          <div>
+            <h3 style={{ fontSize: '1.08rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>Recent Booking Audit</h3>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>Shows the latest booking actions recorded by this backend.</div>
+          </div>
+        </div>
+
+        {auditLogs.length === 0 ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>No booking audit entries recorded yet.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {auditLogs.map((audit) => (
+              <div key={audit.id} style={{ background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '14px 16px', display: 'grid', gridTemplateColumns: 'minmax(140px, 180px) minmax(120px, 150px) minmax(150px, 1fr) minmax(220px, 1.3fr)', gap: '14px', alignItems: 'start' }}>
+                <div>
+                  <div style={{ fontSize: '0.74rem', fontWeight: '700', letterSpacing: '0.06em', textTransform: 'uppercase', color: '#2563eb', marginBottom: '6px' }}>{audit.action.replaceAll('_', ' ')}</div>
+                  <div style={{ fontSize: '0.84rem', fontWeight: '700', color: 'var(--text-primary)' }}>#{audit.bookingId}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>{formatAuditTimestamp(audit.createdAt)}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Actor</div>
+                  <div style={{ fontSize: '0.84rem', color: 'var(--text-primary)', wordBreak: 'break-word' }}>{audit.actorEmail}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Booking</div>
+                  <div style={{ fontSize: '0.84rem', color: 'var(--text-primary)', fontWeight: '600' }}>{audit.resourceName}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px', wordBreak: 'break-word' }}>{audit.bookingUserEmail}</div>
+                  <div style={{ fontSize: '0.76rem', color: '#166534', marginTop: '6px', fontWeight: '700' }}>{audit.bookingStatus}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Details</div>
+                  <div style={{ fontSize: '0.84rem', color: 'var(--text-primary)', lineHeight: 1.55 }}>{audit.details || 'No details recorded.'}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
     </div>
