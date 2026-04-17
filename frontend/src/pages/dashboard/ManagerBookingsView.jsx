@@ -10,19 +10,24 @@ export default function ManagerBookingsView() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
-    fetchBookings();
-  }, []);
+    if (user?.token) {
+      fetchBookings();
+    }
+  }, [user?.token]);
 
   const fetchBookings = async () => {
     if (!user?.token) return;
     setLoading(true);
+    setLoadError('');
     try {
       const data = await bookingService.getAllBookings(user.token);
       setBookings(data);
     } catch (err) {
       console.error('Failed to fetch bookings', err);
+      setLoadError(err.message || 'Unable to load bookings right now.');
     } finally {
       setLoading(false);
     }
@@ -184,6 +189,11 @@ export default function ManagerBookingsView() {
       <div style={activeCardStyle}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+          ) : loadError ? (
+            <div style={{ textAlign: 'center', padding: '48px' }}>
+              <p style={{ fontSize: '1.1rem', marginBottom: '8px', fontWeight: '600', color: 'var(--text-primary)' }}>Couldn&apos;t Load Bookings</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{loadError}</p>
+            </div>
           ) : bookings.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px' }}>
               <p style={{ fontSize: '1.2rem', marginBottom: '8px', fontWeight: '600', color: 'var(--text-primary)' }}>No Bookings to Review</p>
