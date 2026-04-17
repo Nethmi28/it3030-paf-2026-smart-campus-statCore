@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CalendarPlus, CalendarClock, CheckCircle, ArrowLeft, Building, Users, Clock, FileText, AlertCircle, UploadCloud } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { bookingService } from '../../services/bookingService';
+import ConfirmationModal from '../../components/common/ConfirmationModal';
 
 const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8089';
 import ManagerBookingsView from './ManagerBookingsView';
@@ -34,6 +35,7 @@ export function StudentBookingsView() {
   });
   const [durationHours, setDurationHours] = useState(2);
   const [file, setFile] = useState(null);
+  const [cancelConfirm, setCancelConfirm] = useState({ isOpen: false, bookingId: null });
 
   useEffect(() => {
     if (location.state?.action === 'create') setActiveTab('create');
@@ -63,8 +65,12 @@ export function StudentBookingsView() {
     }
   };
 
-  const handleCancelBooking = async (id) => {
-    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+  const handleCancelBooking = (id) => {
+    setCancelConfirm({ isOpen: true, bookingId: id });
+  };
+
+  const executeCancel = async () => {
+    const id = cancelConfirm.bookingId;
     try {
       await bookingService.cancelBooking(user.token, id);
       fetchMyBookings();
@@ -532,6 +538,16 @@ export function StudentBookingsView() {
           </div>
         )}
       </div>
+      <ConfirmationModal
+        isOpen={cancelConfirm.isOpen}
+        onClose={() => setCancelConfirm({ isOpen: false, bookingId: null })}
+        onConfirm={executeCancel}
+        type="danger"
+        title="Cancel Booking"
+        message="Are you sure you want to cancel this booking? This action cannot be undone."
+        confirmLabel="Cancel Booking"
+        cancelLabel="Keep Booking"
+      />
     </div>
   );
 }

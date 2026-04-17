@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, LayoutGrid, List, ChevronDown, Loader2, AlertCircle } from 'lucide-react';
+import { 
+  Search, Filter, LayoutGrid, List, ChevronDown, 
+  Loader2, AlertCircle, ArrowLeft, GraduationCap 
+} from 'lucide-react';
 import ResourceCard from '../../components/resources/ResourceCard';
+import FacultyCard from '../../components/resources/FacultyCard';
 import { FACULTIES, CAPACITIES } from '../../data/mockResources';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -15,10 +19,23 @@ export default function Resources() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFaculty, setSelectedFaculty] = useState('All Faculties');
   const [selectedCapacity, setSelectedCapacity] = useState('All Capacities');
+  const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'grid'
+
+  // Pre-calculate faculty counts
+  const facultyCounts = FACULTIES.reduce((acc, faculty) => {
+    acc[faculty] = resources.filter(r => r.faculty === faculty).length;
+    return acc;
+  }, {});
+
+  const handleFacultyClick = (faculty) => {
+    setSelectedFaculty(faculty);
+    setViewMode('grid');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     fetchResources();
-  }, [selectedFaculty, selectedCapacity, user?.token]);
+  }, [selectedFaculty, selectedCapacity]);
 
   const fetchResources = async () => {
     setLoading(true);
@@ -32,12 +49,12 @@ export default function Resources() {
       
       if (params.toString()) url += `?${params.toString()}`;
 
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${user?.token}`,
-          'Accept': 'application/json'
-        }
-      });
+      const headers = { 'Accept': 'application/json' };
+      if (user?.token) {
+        headers['Authorization'] = `Bearer ${user.token}`;
+      }
+
+      const response = await fetch(url, { headers });
 
       if (!response.ok) throw new Error('Failed to fetch resources');
       
@@ -56,166 +73,183 @@ export default function Resources() {
   });
 
   return (
-    <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div>
-          <h2 style={{ fontSize: '1.875rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>
-            Campus Resources
-          </h2>
-          <div style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>
-            Browse and filter through {filteredResources.length} available facilities
-          </div>
-        </div>
-      </div>
-
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column',
-        gap: '16px', 
-        padding: '24px',
-        background: 'var(--bg-card)',
-        borderRadius: '16px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-        border: '1px solid var(--border-color)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', flexGrow: 1, position: 'relative' }}>
-          <Search size={20} style={{ position: 'absolute', left: '16px', color: 'var(--text-muted)' }} />
-          <input 
-            type="text" 
-            placeholder="Search by name or location..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '14px 14px 14px 48px',
-              borderRadius: '10px',
-              border: '1px solid var(--border-color)',
-              background: 'var(--bg-alt)',
-              fontSize: '1rem',
-              color: 'var(--text-primary)',
-              transition: 'all 0.2s ease',
-              outline: 'none'
-            }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          {/* Faculty Filter */}
-          <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
-            <div style={{ marginBottom: '8px', fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Faculty</div>
-            <div style={{ position: 'relative' }}>
-              <select 
-                value={selectedFaculty}
-                onChange={(e) => setSelectedFaculty(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border-color)',
-                  background: 'var(--bg-alt)',
-                  fontSize: '0.95rem',
-                  color: 'var(--text-primary)',
-                  appearance: 'none',
-                  cursor: 'pointer',
-                  outline: 'none'
-                }}
-              >
-                <option>All Faculties</option>
-                {FACULTIES.map(faculty => (
-                  <option key={faculty} value={faculty}>{faculty}</option>
-                ))}
-              </select>
-              <ChevronDown size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }} />
-            </div>
-          </div>
-
-          {/* Capacity Filter */}
-          <div style={{ position: 'relative', width: '200px' }}>
-            <div style={{ marginBottom: '8px', fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Min. Capacity</div>
-            <div style={{ position: 'relative' }}>
-              <select 
-                value={selectedCapacity}
-                onChange={(e) => setSelectedCapacity(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border-color)',
-                  background: 'var(--bg-alt)',
-                  fontSize: '0.95rem',
-                  color: 'var(--text-primary)',
-                  appearance: 'none',
-                  cursor: 'pointer',
-                  outline: 'none'
-                }}
-              >
-                <option>All Capacities</option>
-                {CAPACITIES.map(cap => (
-                  <option key={cap} value={cap}>{cap}+ People</option>
-                ))}
-              </select>
-              <ChevronDown size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }} />
-            </div>
-          </div>
-
-          <button 
-            onClick={() => {
-              setSearchQuery('');
-              setSelectedFaculty('All Faculties');
-              setSelectedCapacity('All Capacities');
-            }}
-            style={{
-              padding: '12px 24px',
-              borderRadius: '10px',
-              border: '1px solid var(--border-color)',
-              background: 'white',
-              color: '#ef4444',
-              fontWeight: '600',
-              fontSize: '0.9rem',
-              cursor: 'pointer',
-              alignSelf: 'flex-end',
-              height: '46px'
-            }}
-          >
-            Clear All
-          </button>
-        </div>
-      </div>
+    <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', gap: '32px', minHeight: '100vh' }}>
       
-      {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px', gap: '16px' }}>
-          <Loader2 size={40} className="animate-spin" style={{ color: 'var(--accent)' }} />
-          <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Fetching resources...</p>
+      {/* Dynamic Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          {viewMode === 'grid' && (
+            <button 
+              onClick={() => {
+                setViewMode('overview');
+                setSelectedFaculty('All Faculties');
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                marginBottom: '16px',
+                padding: 0,
+                fontSize: '0.9rem',
+                fontWeight: '600'
+              }}
+            >
+              <ArrowLeft size={18} />
+              Back to Overview
+            </button>
+          )}
+          <h2 style={{ fontSize: '2.5rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '8px', letterSpacing: '-0.02em' }}>
+            {viewMode === 'overview' ? 'Campus Infrastructure' : selectedFaculty}
+          </h2>
+          <div style={{ color: 'var(--text-muted)', fontSize: '1.1rem', fontWeight: '500' }}>
+            {viewMode === 'overview' 
+              ? 'Select a faculty starting point to discover specialized spaces'
+              : `Showing ${filteredResources.length} facilities in ${selectedFaculty}`
+            }
+          </div>
         </div>
-      ) : error ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px', gap: '16px', background: '#fef2f2', borderRadius: '20px', border: '1px solid #fee2e2' }}>
-          <AlertCircle size={40} style={{ color: '#ef4444' }} />
-          <p style={{ color: '#b91c1c', fontWeight: '500' }}>{error}</p>
-          <button onClick={fetchResources} style={{ padding: '8px 16px', borderRadius: '8px', background: 'white', border: '1px solid #fee2e2', cursor: 'pointer' }}>Try Again</button>
-        </div>
-      ) : filteredResources.length > 0 ? (
+      </div>
+
+      {viewMode === 'overview' ? (
+        /* Overview Mode: Faculty Showcase */
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', 
-          gap: '24px' 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', 
+          gap: '32px',
+          marginTop: '12px'
         }}>
-          {filteredResources.map(resource => (
-            <ResourceCard key={resource.id} resource={resource} />
+          {FACULTIES.filter(f => f !== 'Sports equipments').map(faculty => (
+            <FacultyCard 
+              key={faculty} 
+              faculty={faculty} 
+              count={facultyCounts[faculty] || 0}
+              onClick={handleFacultyClick}
+            />
           ))}
+          
+          {/* Quick Search / All Resources Card */}
+          <div 
+            onClick={() => setViewMode('grid')}
+            className="glass-card hover-glow"
+            style={{
+              padding: '40px',
+              borderRadius: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              cursor: 'pointer',
+              border: '2px dashed var(--border-color)',
+              background: 'transparent'
+            }}
+          >
+            <div style={{ padding: '20px', borderRadius: '50%', background: 'var(--bg-alt)', marginBottom: '20px' }}>
+              <LayoutGrid size={32} style={{ color: 'var(--accent)' }} />
+            </div>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '8px' }}>All Facilities</h3>
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>Browse everything at once</p>
+          </div>
         </div>
       ) : (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '80px', 
-          background: 'var(--bg-card)', 
-          borderRadius: '20px',
-          border: '1px dashed var(--border-color)',
-          color: 'var(--text-muted)'
-        }}>
-          <Filter size={48} style={{ marginBottom: '16px', opacity: 0.2 }} />
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)' }}>No resources found</h3>
-          <p>Try adjusting your filters or search query</p>
-        </div>
+        /* Grid Mode: Filtered Resources */
+        <>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            gap: '16px', 
+            padding: '32px',
+            background: 'var(--bg-card)',
+            borderRadius: '24px',
+            boxShadow: 'var(--shadow)',
+            border: '1px solid var(--border-color)',
+            position: 'sticky',
+            top: '0',
+            zIndex: 10
+          }}>
+            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', flexGrow: 1, position: 'relative' }}>
+                <Search size={22} style={{ position: 'absolute', left: '18px', color: 'var(--text-muted)' }} />
+                <input 
+                  type="text" 
+                  placeholder="Find a specific room or lab..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '16px 16px 16px 54px',
+                    borderRadius: '16px',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-alt)',
+                    fontSize: '1rem',
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                    transition: 'border-color 0.2s'
+                  }}
+                />
+              </div>
+
+              <div style={{ position: 'relative', width: '220px' }}>
+                <select 
+                  value={selectedCapacity}
+                  onChange={(e) => setSelectedCapacity(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '16px 20px',
+                    borderRadius: '16px',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-alt)',
+                    fontSize: '0.95rem',
+                    color: 'var(--text-primary)',
+                    appearance: 'none',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    fontWeight: '600'
+                  }}
+                >
+                  <option>All Capacities</option>
+                  {CAPACITIES.map(cap => (
+                    <option key={cap} value={cap}>{cap}+ People</option>
+                  ))}
+                </select>
+                <ChevronDown size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }} />
+              </div>
+            </div>
+          </div>
+
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px', gap: '16px' }}>
+              <Loader2 size={40} className="animate-spin" style={{ color: 'var(--accent)' }} />
+              <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Loading resources...</p>
+            </div>
+          ) : filteredResources.length > 0 ? (
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', 
+              gap: '32px' 
+            }}>
+              {filteredResources.map(resource => (
+                <ResourceCard key={resource.id} resource={resource} />
+              ))}
+            </div>
+          ) : (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '100px', 
+              background: 'var(--bg-card)', 
+              borderRadius: '24px',
+              border: '2px dashed var(--border-color)',
+              color: 'var(--text-muted)'
+            }}>
+              <AlertCircle size={48} style={{ marginBottom: '16px', opacity: 0.2 }} />
+              <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>No resources found</h3>
+              <p>Try adjusting your search or filters</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
