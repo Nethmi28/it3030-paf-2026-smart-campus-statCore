@@ -19,3 +19,10 @@ $RECYCLE.BIN/
 node_modules/
 *.log
 m2repo/
+
+# Local environment secrets
+.env
+.env.*
+backend/.env
+frontend/.env
+frontend/.env.*

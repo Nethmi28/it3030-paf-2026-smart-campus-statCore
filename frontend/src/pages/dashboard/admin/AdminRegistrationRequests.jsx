@@ -92,7 +92,7 @@ export default function AdminRegistrationRequests() {
         )
       );
       setSuccessMessage(
-        `${payload.message} Student login: ${payload.email} | Temporary password: ${payload.temporaryPassword}`
+        `${payload.message} Account login: ${payload.email} | ${payload.loginNote}`
       );
     } catch (approvalError) {
       setError(approvalError.message || 'Unable to approve this request right now.');
@@ -109,7 +109,7 @@ export default function AdminRegistrationRequests() {
         <div>
           <h2 style={{ fontSize: '1.9rem', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>New Registration Requests</h2>
           <p style={{ color: '#64748b', maxWidth: '720px', lineHeight: 1.7 }}>
-            New students who do not have website access appear here. Approve a request to create their student account and generate a temporary password.
+            Campus account requests for students, technicians, managers, and admins appear here. Approve a request to activate the requested role account.
           </p>
         </div>
 
@@ -151,13 +151,13 @@ export default function AdminRegistrationRequests() {
         <div style={{ ...cardStyle, overflow: 'hidden' }}>
         <div style={{ padding: '22px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <UserPlus size={20} color="#2563eb" />
-          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Student Access Queue</div>
+          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Campus Access Queue</div>
         </div>
 
         {loading ? (
           <div style={{ padding: '24px', color: '#64748b' }}>Loading registration requests...</div>
         ) : requests.length === 0 ? (
-          <div style={{ padding: '28px 24px', color: '#64748b' }}>No student registration requests have been sent yet.</div>
+          <div style={{ padding: '28px 24px', color: '#64748b' }}>No account registration requests have been sent yet.</div>
         ) : (
           <div style={{ display: 'grid', gap: '16px', padding: '20px' }}>
             {requests.map((request) => {
@@ -171,12 +171,22 @@ export default function AdminRegistrationRequests() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', marginBottom: '14px' }}>
                     <div>
                       <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>{request.fullName}</div>
+                      {request.requestedRole && (
+                        <div style={{ color: '#2563eb', fontSize: '0.82rem', fontWeight: 700, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          {request.requestedRole.replace('ROLE_', '')}
+                        </div>
+                      )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#475569', fontSize: '0.95rem', marginBottom: '6px' }}>
                         <Mail size={15} />
                         {request.email}
                       </div>
+                      {request.googleEmail && (
+                        <div style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '6px' }}>
+                          Google sign-in email: <strong style={{ color: '#334155' }}>{request.googleEmail}</strong>
+                        </div>
+                      )}
                       <div style={{ color: '#64748b', fontSize: '0.9rem' }}>
-                        Student ID: <strong style={{ color: '#334155' }}>{request.studentId}</strong> | Faculty: <strong style={{ color: '#334155' }}>{request.faculty}</strong>
+                        Campus ID: <strong style={{ color: '#334155' }}>{request.studentId}</strong> | Faculty / Unit: <strong style={{ color: '#334155' }}>{request.faculty}</strong>
                       </div>
                     </div>
 
@@ -212,7 +222,7 @@ export default function AdminRegistrationRequests() {
 
                   {request.status === 'APPROVED' && (
                     <div style={{ marginTop: '12px', color: '#166534', fontSize: '0.9rem', fontWeight: 600 }}>
-                      Temporary login password for this student: {request.studentId}@2026
+                      This account can sign in once the approved role access is active.
                     </div>
                   )}
                 </div>

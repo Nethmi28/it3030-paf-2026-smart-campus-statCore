@@ -9,6 +9,7 @@ import java.util.List;
 @Repository
 public interface AccountRequestRepository extends JpaRepository<AccountRequest, Long> {
     boolean existsByEmailIgnoreCase(String email);
+    boolean existsByGoogleEmailIgnoreCase(String googleEmail);
     boolean existsByStudentIdIgnoreCase(String studentId);
     List<AccountRequest> findAllByOrderByCreatedAtDesc();
 }

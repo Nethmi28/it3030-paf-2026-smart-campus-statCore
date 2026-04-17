@@ -2,12 +2,10 @@ package com.facilio.facilio_campus.seeder;
 
 import com.facilio.facilio_campus.model.Resource;
 import com.facilio.facilio_campus.repository.ResourceRepository;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -16,19 +14,21 @@ import java.util.List;
 @Component
 public class ResourceSeeder implements CommandLineRunner {
 
-    @Autowired
-    private ResourceRepository resourceRepository;
+    private static final Logger logger = LoggerFactory.getLogger(ResourceSeeder.class);
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final ResourceRepository resourceRepository;
+
+    public ResourceSeeder(ResourceRepository resourceRepository) {
+        this.resourceRepository = resourceRepository;
+    }
 
     @Override
-    @Transactional
     public void run(String... args) throws Exception {
-        // Use native truncate for maximum performance and stability on remote DB
-        entityManager.createNativeQuery("TRUNCATE TABLE resource_amenities CASCADE").executeUpdate();
-        entityManager.createNativeQuery("TRUNCATE TABLE resources CASCADE").executeUpdate();
-        
+        if (resourceRepository.count() > 0) {
+            logger.info("Skipping resource seed because resources already exist.");
+            return;
+        }
+
         seedResources();
     }
 

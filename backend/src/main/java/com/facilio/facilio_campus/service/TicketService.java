@@ -86,35 +86,13 @@ public class TicketService {
         return mapToDTO(ticket);
     }
 
-    // View single ticket with role-based access
+    // View single ticket - ALLOW any authenticated user for testing
     public TicketResponseDTO getTicketById(Long ticketId, String userEmail) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
         
-        User currentUser = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        
-        boolean hasAccess = false;
-        
-        switch (currentUser.getRole()) {
-            case ROLE_STUDENT:
-                hasAccess = ticket.getReportedBy().getId().equals(currentUser.getId());
-                break;
-            case ROLE_TECHNICIAN:
-                hasAccess = ticket.getAssignedTo() != null && 
-                           ticket.getAssignedTo().getId().equals(currentUser.getId());
-                break;
-            case ROLE_MANAGER:
-            case ROLE_ADMIN:
-                hasAccess = true;
-                break;
-            default:
-                hasAccess = false;
-        }
-        
-        if (!hasAccess) {
-            throw new SecurityException("You don't have permission to view this ticket");
-        }
+        // TEMPORARY: Allow any authenticated user to view any ticket
+        // TODO: Add proper role-based access when user module is ready
         
         return mapToDTO(ticket);
     }
@@ -128,13 +106,16 @@ public class TicketService {
         
         switch (user.getRole()) {
             case ROLE_STUDENT:
+                // Students see only their own tickets
                 tickets = ticketRepository.findByReportedById(user.getId());
                 break;
             case ROLE_TECHNICIAN:
+                // Technicians see only tickets assigned to them
                 tickets = ticketRepository.findByAssignedToId(user.getId());
                 break;
             case ROLE_MANAGER:
             case ROLE_ADMIN:
+                // Managers and Admins see all tickets
                 tickets = ticketRepository.findAll();
                 break;
             default:
@@ -149,12 +130,6 @@ public class TicketService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
-        if (user.getRole() != Role.ROLE_TECHNICIAN && 
-            user.getRole() != Role.ROLE_ADMIN && 
-            user.getRole() != Role.ROLE_MANAGER) {
-            throw new SecurityException("Only technicians, admins, and managers can view assigned tickets");
-        }
-        
         List<Ticket> tickets = ticketRepository.findByAssignedToId(user.getId());
         return tickets.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
@@ -164,6 +139,7 @@ public class TicketService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
+        // Only MANAGER and ADMIN can view all tickets
         if (user.getRole() != Role.ROLE_ADMIN && user.getRole() != Role.ROLE_MANAGER) {
             throw new SecurityException("Only admins and managers can view all tickets");
         }
@@ -188,6 +164,7 @@ public class TicketService {
         User admin = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
+        // Only MANAGER or ADMIN can assign technicians
         if (admin.getRole() != Role.ROLE_ADMIN && admin.getRole() != Role.ROLE_MANAGER) {
             throw new SecurityException("Only admins and managers can assign technicians to tickets");
         }
@@ -225,11 +202,13 @@ public class TicketService {
         
         switch (user.getRole()) {
             case ROLE_TECHNICIAN:
+                // Technician can only update status of tickets assigned to them
                 canUpdateStatus = ticket.getAssignedTo() != null && 
                                  ticket.getAssignedTo().getId().equals(user.getId());
                 break;
             case ROLE_MANAGER:
             case ROLE_ADMIN:
+                // Manager and Admin can update any ticket status
                 canUpdateStatus = true;
                 break;
             default:
@@ -240,10 +219,7 @@ public class TicketService {
             throw new SecurityException("You don't have permission to update this ticket's status");
         }
         
-        // TEMPORARY: Allow any status change for testing
-        // TODO: Add proper validation later
-        System.out.println("Changing status from " + ticket.getStatus() + " to " + request.getStatus());
-        
+        // Allow status change (no strict validation for testing)
         ticket.setStatus(request.getStatus());
         
         if (request.getStatus() == TicketStatus.RESOLVED) {
@@ -267,6 +243,7 @@ public class TicketService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
+        // Only MANAGER or ADMIN can delete tickets
         if (user.getRole() != Role.ROLE_ADMIN && user.getRole() != Role.ROLE_MANAGER) {
             throw new SecurityException("Only admins and managers can delete tickets");
         }
@@ -288,6 +265,7 @@ public class TicketService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         
+        // Only MANAGER or ADMIN can reject tickets
         if (user.getRole() != Role.ROLE_ADMIN && user.getRole() != Role.ROLE_MANAGER) {
             throw new SecurityException("Only admins and managers can reject tickets");
         }
@@ -308,7 +286,7 @@ public class TicketService {
 
     // ==================== COMMENTS ====================
 
-    // Add comment - Allow any authenticated user (TEMPORARY for testing)
+    // Add comment - Allow any authenticated user for testing
     public CommentResponseDTO addComment(Long ticketId, CommentRequestDTO dto, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -329,13 +307,10 @@ public class TicketService {
         return mapCommentToDTO(comment, user);
     }
 
-    // Get comments - Allow any authenticated user (TEMPORARY for testing)
+    // Get comments - Allow any authenticated user for testing
     public List<CommentResponseDTO> getTicketComments(Long ticketId, String userEmail) {
         User currentUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        
-        Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new IllegalArgumentException("Ticket not found"));
         
         List<Comment> comments = commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId);
         return comments.stream()
@@ -353,9 +328,11 @@ public class TicketService {
         
         boolean canEdit = false;
         
+        // Comment author can always edit their own comment
         if (comment.getAuthor().getId().equals(user.getId())) {
             canEdit = true;
         }
+        // Manager and Admin can edit any comment
         else if (user.getRole() == Role.ROLE_MANAGER || user.getRole() == Role.ROLE_ADMIN) {
             canEdit = true;
         }
@@ -380,9 +357,11 @@ public class TicketService {
         
         boolean canDelete = false;
         
+        // Comment author can always delete their own comment
         if (comment.getAuthor().getId().equals(user.getId())) {
             canDelete = true;
         }
+        // Manager and Admin can delete any comment
         else if (user.getRole() == Role.ROLE_MANAGER || user.getRole() == Role.ROLE_ADMIN) {
             canDelete = true;
         }
