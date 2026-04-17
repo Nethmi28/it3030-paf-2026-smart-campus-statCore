@@ -164,6 +164,126 @@ export default function TicketDetailsCard({ ticket, onBack, onTicketUpdate }) {
     const isTicketOwner = ticket.reportedById === user?.id;
     const isAssignedTechnician = ticket.assignedToId === user?.id;
 
+    // SLA Helper Functions
+const calculateTimeOpen = (createdAt) => {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffMs = now - created;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    const remainingHours = diffHours % 24;
+    
+    if (diffDays > 0) {
+        return `${diffDays}d ${remainingHours}h`;
+    }
+    return `${diffHours} hours`;
+};
+
+const calculateResolutionTime = (createdAt, resolvedAt) => {
+    if (!resolvedAt) return 'N/A';
+    const created = new Date(createdAt);
+    const resolved = new Date(resolvedAt);
+    const diffMs = resolved - created;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    const remainingHours = diffHours % 24;
+    
+    if (diffDays > 0) {
+        return `${diffDays}d ${remainingHours}h`;
+    }
+    return `${diffHours} hours`;
+};
+
+const calculateSLAPercentage = (createdAt) => {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffHours = (now - created) / (1000 * 60 * 60);
+    // SLA target is 72 hours (3 days)
+    const percentage = Math.min((diffHours * 100) / 72, 100);
+    return Math.max(Math.floor(percentage), 5);
+};
+
+const getSLAColor = (createdAt, status, resolvedAt) => {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffHours = (now - created) / (1000 * 60 * 60);
+    
+    // If resolved, check resolution time
+    if (status === 'RESOLVED' || status === 'CLOSED') {
+        if (resolvedAt) {
+            const resolved = new Date(resolvedAt);
+            const resolutionHours = (resolved - created) / (1000 * 60 * 60);
+            if (resolutionHours <= 24) return '#22c55e';
+            if (resolutionHours <= 48) return '#eab308';
+            return '#ef4444';
+        }
+    }
+    
+    if (diffHours <= 24) return '#22c55e';
+    if (diffHours <= 48) return '#eab308';
+    return '#ef4444';
+};
+
+const getSLABgColor = (createdAt, status, resolvedAt) => {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffHours = (now - created) / (1000 * 60 * 60);
+    
+    if (status === 'RESOLVED' || status === 'CLOSED') {
+        if (resolvedAt) {
+            const resolved = new Date(resolvedAt);
+            const resolutionHours = (resolved - created) / (1000 * 60 * 60);
+            if (resolutionHours <= 24) return '#dcfce7';
+            if (resolutionHours <= 48) return '#fef3c7';
+            return '#fee2e2';
+        }
+    }
+    
+    if (diffHours <= 24) return '#dcfce7';
+    if (diffHours <= 48) return '#fef3c7';
+    return '#fee2e2';
+};
+
+const getSLATextColor = (createdAt, status, resolvedAt) => {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffHours = (now - created) / (1000 * 60 * 60);
+    
+    if (status === 'RESOLVED' || status === 'CLOSED') {
+        if (resolvedAt) {
+            const resolved = new Date(resolvedAt);
+            const resolutionHours = (resolved - created) / (1000 * 60 * 60);
+            if (resolutionHours <= 24) return '#15803d';
+            if (resolutionHours <= 48) return '#b45309';
+            return '#b91c1c';
+        }
+    }
+    
+    if (diffHours <= 24) return '#15803d';
+    if (diffHours <= 48) return '#b45309';
+    return '#b91c1c';
+};
+
+const getSLAStatus = (createdAt, status, resolvedAt) => {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffHours = (now - created) / (1000 * 60 * 60);
+    
+    if (status === 'RESOLVED' || status === 'CLOSED') {
+        if (resolvedAt) {
+            const resolved = new Date(resolvedAt);
+            const resolutionHours = (resolved - created) / (1000 * 60 * 60);
+            if (resolutionHours <= 24) return '✅ Within SLA';
+            if (resolutionHours <= 48) return '⚠️ Approaching SLA';
+            return '🔴 SLA Breached';
+        }
+    }
+    
+    if (diffHours <= 24) return '🟢 On Track';
+    if (diffHours <= 48) return '🟡 Urgent - Action Required';
+    return '🔴 Overdue - SLA Breached';
+};
+
     const getStatusConfig = (status) => {
         const configs = {
             'OPEN': { bg: '#e0f2fe', text: '#0369a1', icon: <AlertTriangle size={14} />, label: 'Open', border: '#bae6fd' },
@@ -596,6 +716,71 @@ export default function TicketDetailsCard({ ticket, onBack, onTicketUpdate }) {
                             {ticket.resolutionNotes && <DetailItem icon={<CheckCircle size={16} />} label="Resolution Notes" value={ticket.resolutionNotes} color="#22c55e" />}
                             {ticket.rejectedReason && <DetailItem icon={<XCircle size={16} />} label="Rejection Reason" value={ticket.rejectedReason} color="#dc2626" />}
                         </div>
+                          {/* SLA Timer Card - Add this RIGHT HERE */}
+    <div style={{ background: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+        <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: '600', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Clock size={16} color="#8b5cf6" /> SLA Performance
+        </h4>
+        
+        {/* Time display */}
+        <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '16px', marginBottom: '16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '8px' }}>Time Since Creation</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>
+                {calculateTimeOpen(ticket.createdAt)}
+            </div>
+        </div>
+        
+        {/* Progress bar */}
+        <div style={{ marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.7rem', color: '#64748b' }}>
+                <span>SLA Target (72h)</span>
+                <span>{calculateSLAPercentage(ticket.createdAt)}%</span>
+            </div>
+            <div style={{ background: '#e2e8f0', borderRadius: '10px', height: '8px', overflow: 'hidden' }}>
+                <div style={{ 
+                    width: `${calculateSLAPercentage(ticket.createdAt)}%`, 
+                    height: '100%', 
+                    background: getSLAColor(ticket.createdAt, ticket.status, ticket.resolvedAt),
+                    transition: 'width 0.5s',
+                    borderRadius: '10px'
+                }} />
+            </div>
+        </div>
+        
+        {/* SLA Status Badge */}
+        <div style={{ textAlign: 'center' }}>
+            <span style={{ 
+                padding: '6px 14px', 
+                borderRadius: '20px', 
+                background: getSLABgColor(ticket.createdAt, ticket.status, ticket.resolvedAt),
+                color: getSLATextColor(ticket.createdAt, ticket.status, ticket.resolvedAt),
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+            }}>
+                {getSLAStatus(ticket.createdAt, ticket.status, ticket.resolvedAt)}
+            </span>
+        </div>
+        
+        {/* SLA Info Text */}
+        {ticket.status === 'OPEN' && (
+            <div style={{ marginTop: '12px', padding: '8px', background: '#eff6ff', borderRadius: '8px', fontSize: '0.7rem', color: '#3b82f6', textAlign: 'center' }}>
+                ⏱️ Target resolution within 72 hours
+            </div>
+        )}
+        {ticket.status === 'IN_PROGRESS' && (
+            <div style={{ marginTop: '12px', padding: '8px', background: '#fef3c7', borderRadius: '8px', fontSize: '0.7rem', color: '#d97706', textAlign: 'center' }}>
+                🔧 In progress - Technician assigned
+            </div>
+        )}
+        {(ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') && ticket.resolvedAt && (
+            <div style={{ marginTop: '12px', padding: '8px', background: '#dcfce7', borderRadius: '8px', fontSize: '0.7rem', color: '#15803d', textAlign: 'center' }}>
+                ✅ Resolved in {calculateResolutionTime(ticket.createdAt, ticket.resolvedAt)}
+            </div>
+        )}
+    </div>
 
                         {/* Update Status Card */}
                         {canUpdateStatus && (
