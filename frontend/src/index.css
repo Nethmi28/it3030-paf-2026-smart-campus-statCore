@@ -66,3 +66,44 @@ a {
 ul {
   list-style: none;
 }
+
+/* TipTap Editor Styles */
+.tiptap-editor {
+    min-height: 150px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    outline: none;
+}
+
+.tiptap-editor:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.tiptap-editor p {
+    margin: 0 0 8px 0;
+}
+
+.tiptap-editor ul, 
+.tiptap-editor ol {
+    padding-left: 20px;
+    margin: 8px 0;
+}
+
+.tiptap-editor li {
+    margin: 4px 0;
+}
+
+.tiptap-editor h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 12px 0 8px 0;
+}
+
+.tiptap-editor h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 10px 0 6px 0;
+}

@@ -282,25 +282,7 @@ export default function TicketUserView() {
 
           {isAdminOrManager && (
             <>
-              <button
-                onClick={() => {
-                  setViewMode('my');
-                  setFilters({ status: '', priority: '', category: '' });
-                }}
-                style={{
-                  padding: '8px 20px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '0.875rem',
-                  background: viewMode === 'my' ? '#3b82f6' : 'transparent',
-                  color: viewMode === 'my' ? 'white' : 'var(--text-muted)',
-                  transition: 'all 0.2s'
-                }}
-              >
-                My Tickets
-              </button>
+            
               <button
                 onClick={() => {
                   setViewMode('all');

@@ -451,18 +451,20 @@ export default function TicketDetailsCard({ ticket, onBack, onTicketUpdate }) {
                     {/* LEFT COLUMN */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-                        {/* Description Card */}
-                        <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                                <div style={{ background: '#eff6ff', padding: '8px', borderRadius: '10px', color: '#3b82f6' }}>
-                                    <FileImage size={18} />
-                                </div>
-                                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#0f172a' }}>Issue Description</h4>
-                            </div>
-                            <p style={{ margin: 0, whiteSpace: 'pre-wrap', color: '#334155', lineHeight: '1.7', fontSize: '0.95rem' }}>
-                                {ticket.description}
-                            </p>
-                        </div>
+{/* Description Card */}
+<div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+        <div style={{ background: '#eff6ff', padding: '8px', borderRadius: '10px', color: '#3b82f6' }}>
+            <FileImage size={18} />
+        </div>
+        <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#0f172a' }}>Issue Description</h4>
+    </div>
+    {/* Render HTML content from TipTap */}
+    <div 
+        style={{ margin: 0, color: '#334155', lineHeight: '1.7', fontSize: '0.95rem' }}
+        dangerouslySetInnerHTML={{ __html: ticket.description }}
+    />
+</div>
 
                         {/* Comments Card */}
                         <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
