@@ -57,12 +57,12 @@ export const MOCK_RESOURCES = [
   ...generateSeries('ELab', 1, 10, 'LAB', 'Faculty of Engineering', 60, engLabImg),
 
   // School of Architecture (ARC) - 10 Lec, 10 Labs
-  ...generateSeries('ARC', 101, 110, 'LECTURE ROOM', 'School of architecture', 60, arcLecImg),
-  ...generateSeries('ARCLab', 1, 10, 'LAB', 'School of architecture', 30, arcLabImg),
+  ...generateSeries('ARC', 101, 110, 'LECTURE ROOM', 'School of Architecture', 60, arcLecImg),
+  ...generateSeries('ARCLab', 1, 10, 'LAB', 'School of Architecture', 30, arcLabImg),
 
   // Faculty of Humanities & science (HS) - 10 Lec, 10 Labs
-  ...generateSeries('HS', 101, 110, 'LECTURE ROOM', 'Faculty of Humanities & science', 120, humLecImg),
-  ...generateSeries('HSLab', 1, 10, 'LAB', 'Faculty of Humanities & science', 60, humLabImg),
+  ...generateSeries('HS', 101, 110, 'LECTURE ROOM', 'Faculty of Humanities & Science', 120, humLecImg),
+  ...generateSeries('HSLab', 1, 10, 'LAB', 'Faculty of Humanities & Science', 60, humLabImg),
 
   // Global Resources
   {
@@ -119,6 +119,39 @@ export const MOCK_RESOURCES = [
     status: 'Available',
     imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=800',
     amenities: ['Lockers', 'Water Station'],
+  },
+  {
+    id: 'BUS01',
+    name: 'Colombo - Town Hall Shuttle',
+    type: 'SHUTTLE',
+    faculty: 'Student Services',
+    location: 'Shuttle Terminal A',
+    capacity: 54,
+    status: 'Available',
+    imageUrl: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=800',
+    amenities: ['Air Conditioning', 'Wi-Fi', 'GPS Tracking'],
+  },
+  {
+    id: 'BUS02',
+    name: 'Kaduwela - Campus Express',
+    type: 'SHUTTLE',
+    faculty: 'Student Services',
+    location: 'Shuttle Terminal B',
+    capacity: 45,
+    status: 'Available',
+    imageUrl: 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&q=80&w=800',
+    amenities: ['Air Conditioning', 'CCTV', 'Emergency Exit'],
+  },
+  {
+    id: 'BUS03',
+    name: 'Negombo - Long Distance Shuttle',
+    type: 'SHUTTLE',
+    faculty: 'Shuttle',
+    location: 'Shuttle Terminal A',
+    capacity: 40,
+    status: 'Available',
+    imageUrl: 'https://images.unsplash.com/photo-1562620644-66ba4768532c?auto=format&fit=crop&q=80&w=800',
+    amenities: ['Reclining Seats', 'Reading Lights', 'Wi-Fi'],
   }
 ];
 
@@ -126,10 +159,10 @@ export const FACULTIES = [
   'Faculty of Computing',
   'Business School',
   'Faculty of Engineering',
-  'School of architecture',
+  'School of Architecture',
   'Faculty of Humanities & science',
-  'Sports equipments',
   'Student Services',
+  'Sports equipments',
   'General'
 ];
 

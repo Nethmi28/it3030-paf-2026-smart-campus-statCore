@@ -1,6 +1,7 @@
 package com.facilio.facilio_campus.controller;
 
 import com.facilio.facilio_campus.dto.ResourceDTO;
+import com.facilio.facilio_campus.dto.ResourceStatsDTO;
 import com.facilio.facilio_campus.service.ResourceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +35,12 @@ public class ResourceController {
     @GetMapping("/{id}")
     public ResponseEntity<ResourceDTO> getResourceById(@PathVariable Long id) {
         return ResponseEntity.ok(resourceService.getResourceById(id));
+    }
+
+    @GetMapping("/stats")
+    @PreAuthorize("hasRole('MANAGER') or hasRole('ADMIN')")
+    public ResponseEntity<ResourceStatsDTO> getResourceStats() {
+        return ResponseEntity.ok(resourceService.getResourceStats());
     }
 
     @PostMapping(consumes = {"multipart/form-data"})

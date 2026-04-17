@@ -31,17 +31,32 @@ function App() {
             <Route path="/unauthorized" element={<Unauthorized />} />
 
             {/* Dashboard Routes nested and protected */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<DashboardOverview />} />
+            {/* Dashboard Layout - Public/Semi-Public Routes */}
+            <Route path="/dashboard" element={<DashboardLayout />}>
               <Route path="resources" element={<Resources />} />
               <Route path="resources/:id" element={<ResourceDetails />} />
-              <Route path="bookings" element={<Bookings />} />
-              <Route path="tickets" element={<TicketUserView />} />
-              <Route path="notifications" element={<Notifications />} />
+              
+              {/* Protected Sub-routes */}
+              <Route index element={
+                <ProtectedRoute>
+                  <DashboardOverview />
+                </ProtectedRoute>
+              } />
+              <Route path="bookings" element={
+                <ProtectedRoute>
+                  <Bookings />
+                </ProtectedRoute>
+              } />
+              <Route path="tickets" element={
+                <ProtectedRoute>
+                  <TicketUserView />
+                </ProtectedRoute>
+              } />
+              <Route path="notifications" element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              } />
 
               {/* New Role-Based placeholders mapped correctly */}
               <Route
