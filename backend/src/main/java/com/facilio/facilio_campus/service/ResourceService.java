@@ -1,12 +1,15 @@
 package com.facilio.facilio_campus.service;
 
 import com.facilio.facilio_campus.dto.ResourceDTO;
+import com.facilio.facilio_campus.dto.ResourceStatsDTO;
 import com.facilio.facilio_campus.model.Resource;
 import com.facilio.facilio_campus.repository.ResourceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -105,6 +108,31 @@ public class ResourceService {
 
     public void deleteResource(Long id) {
         resourceRepository.deleteById(id);
+    }
+
+    public ResourceStatsDTO getResourceStats() {
+        List<Resource> all = resourceRepository.findAll();
+        
+        long total = all.size();
+        long available = all.stream().filter(r -> "Available".equalsIgnoreCase(r.getStatus())).count();
+        long maintenance = all.stream().filter(r -> "Maintenance".equalsIgnoreCase(r.getStatus())).count();
+        long totalCap = all.stream().mapToLong(Resource::getCapacity).sum();
+
+        Map<String, Long> facultyDist = all.stream()
+                .collect(Collectors.groupingBy(Resource::getFaculty, Collectors.counting()));
+
+        Map<String, Long> typeDist = all.stream()
+                .collect(Collectors.groupingBy(Resource::getType, Collectors.counting()));
+
+        Map<String, Long> capGroups = new HashMap<>();
+        capGroups.put("Small (1-20)", all.stream().filter(r -> r.getCapacity() <= 20).count());
+        capGroups.put("Medium (21-100)", all.stream().filter(r -> r.getCapacity() > 20 && r.getCapacity() <= 100).count());
+        capGroups.put("Large (100+)", all.stream().filter(r -> r.getCapacity() > 100).count());
+
+        return new ResourceStatsDTO(
+                total, available, maintenance, totalCap,
+                facultyDist, typeDist, capGroups
+        );
     }
 
     private ResourceDTO convertToDTO(Resource entity) {

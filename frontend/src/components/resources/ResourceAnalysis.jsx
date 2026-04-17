@@ -1,44 +1,79 @@
+import { useState, useEffect } from 'react';
 import { 
-  BarChart3, PieChart, Users, Building2, 
-  CheckCircle2, AlertTriangle, TrendingUp, Laptop, 
-  MapPin, Clock
+  BarChart3, Users, Building2, 
+  CheckCircle2, AlertTriangle, TrendingUp,
+  Loader2, AlertCircle
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
-export default function ResourceAnalysis({ resources }) {
-  // 1. Core Stat Calculations
-  const totalResources = resources.length;
-  const availableResources = resources.filter(r => r.status === 'Available').length;
-  const maintenanceResources = resources.filter(r => r.status === 'Maintenance').length;
-  
-  // 2. Faculty Distribution
-  const facultyCounts = resources.reduce((acc, r) => {
-    acc[r.faculty] = (acc[r.faculty] || 0) + 1;
-    return acc;
-  }, {});
-  
-  const sortedFaculties = Object.entries(facultyCounts)
-    .sort(([, a], [, b]) => b - a);
-  const maxFacultyCount = Math.max(...Object.values(facultyCounts), 1);
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8089';
 
-  // 3. Type Distribution
-  const typeCounts = resources.reduce((acc, r) => {
-    acc[r.type] = (acc[r.type] || 0) + 1;
-    return acc;
-  }, {});
+export default function ResourceAnalysis() {
+  const { user } = useAuth();
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // 4. Capacity Insights
-  const capacityGroups = {
-    'Small (1-20)': resources.filter(r => r.capacity <= 20).length,
-    'Medium (21-100)': resources.filter(r => r.capacity > 20 && r.capacity <= 100).length,
-    'Large (100+)': resources.filter(r => r.capacity > 100).length,
+  useEffect(() => {
+    fetchStats();
+  }, [user?.token]);
+
+  const fetchStats = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const headers = { 'Accept': 'application/json' };
+      if (user?.token) {
+        headers['Authorization'] = `Bearer ${user.token}`;
+      }
+
+      const response = await fetch(`${API_BASE}/api/resources/stats`, { headers });
+      if (!response.ok) throw new Error('Failed to fetch analytics data');
+      
+      const data = await response.json();
+      setStats(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px', gap: '16px' }}>
+        <Loader2 size={40} className="animate-spin" style={{ color: 'var(--accent)' }} />
+        <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Crunching campus data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ textAlign: 'center', padding: '100px', background: 'var(--bg-card)', borderRadius: '24px', border: '2px dashed #ef4444' }}>
+        <AlertCircle size={48} style={{ color: '#ef4444', marginBottom: '16px', opacity: 0.5 }} />
+        <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>Analytics Error</h3>
+        <p style={{ color: 'var(--text-muted)' }}>{error}</p>
+        <button 
+          onClick={fetchStats}
+          style={{ marginTop: '20px', padding: '10px 20px', borderRadius: '10px', background: 'var(--accent)', color: 'white', border: 'none', cursor: 'pointer' }}
+        >
+          Retry Fetch
+        </button>
+      </div>
+    );
+  }
+
   const statCards = [
-    { title: 'Total Facilities', value: totalResources, icon: <Building2 />, color: '#3b82f6' },
-    { title: 'Operational Now', value: availableResources, icon: <CheckCircle2 />, color: '#10b981' },
-    { title: 'Under Maintenance', value: maintenanceResources, icon: <AlertTriangle />, color: '#f59e0b' },
-    { title: 'Est. Daily Users', value: resources.reduce((sum, r) => sum + r.capacity, 0), icon: <Users />, color: '#6366f1' },
+    { title: 'Total Facilities', value: stats.totalResources, icon: <Building2 />, color: '#3b82f6' },
+    { title: 'Operational Now', value: stats.availableCount, icon: <CheckCircle2 />, color: '#10b981' },
+    { title: 'Under Maintenance', value: stats.maintenanceCount, icon: <AlertTriangle />, color: '#f59e0b' },
+    { title: 'Est. Daily Users', value: stats.totalCapacity, icon: <Users />, color: '#6366f1' },
   ];
+
+  const sortedFaculties = Object.entries(stats.facultyDistribution)
+    .sort(([, a], [, b]) => b - a);
+  const maxFacultyCount = Math.max(...Object.values(stats.facultyDistribution), 1);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', animation: 'fadeIn 0.5s ease-out' }}>
@@ -122,11 +157,11 @@ export default function ResourceAnalysis({ resources }) {
                 <circle 
                   cx="18" cy="18" r="16" fill="none" 
                   stroke="#10b981" strokeWidth="3" 
-                  strokeDasharray={`${(availableResources / totalResources) * 100} 100`}
+                  strokeDasharray={`${(stats.availableCount / stats.totalResources) * 100} 100`}
                 />
               </svg>
               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: '800' }}>{Math.round((availableResources / totalResources) * 100)}%</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: '800' }}>{Math.round((stats.availableCount / stats.totalResources) * 100)}%</div>
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: '700' }}>READY</div>
               </div>
             </div>
@@ -137,14 +172,14 @@ export default function ResourceAnalysis({ resources }) {
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></div>
                   Available
                 </div>
-                <span style={{ fontWeight: '700' }}>{availableResources}</span>
+                <span style={{ fontWeight: '700' }}>{stats.availableCount}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--bg-alt)', borderRadius: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: '600' }}>
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }}></div>
                   In Service
                 </div>
-                <span style={{ fontWeight: '700' }}>{maintenanceResources}</span>
+                <span style={{ fontWeight: '700' }}>{stats.maintenanceCount}</span>
               </div>
             </div>
           </div>
@@ -153,13 +188,13 @@ export default function ResourceAnalysis({ resources }) {
           <div className="glass-card" style={{ padding: '32px', borderRadius: '32px', border: '1px solid var(--border-color)' }}>
             <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '20px' }}>Capacity Grouping</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {Object.entries(capacityGroups).map(([name, count]) => (
+              {Object.entries(stats.capacityGroups).map(([name, count]) => (
                 <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                    <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-muted)', minWidth: '100px' }}>{name}</div>
                    <div style={{ flex: 1, height: '6px', background: 'var(--bg-alt)', borderRadius: '3px' }}>
                      <div style={{ 
                        height: '100%', 
-                       width: `${(count / totalResources) * 100}%`, 
+                       width: `${(count / stats.totalResources) * 100}%`, 
                        background: 'var(--accent)',
                        borderRadius: '3px'
                      }}></div>

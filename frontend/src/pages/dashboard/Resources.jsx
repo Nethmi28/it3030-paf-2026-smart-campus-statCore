@@ -163,7 +163,7 @@ export default function Resources() {
       </div>
 
       {viewMode === 'analysis' ? (
-        <ResourceAnalysis resources={resources} />
+        <ResourceAnalysis />
       ) : viewMode === 'overview' ? (
         /* Overview Mode: Faculty Showcase */
         <div style={{ 
