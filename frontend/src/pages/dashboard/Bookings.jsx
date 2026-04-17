@@ -26,6 +26,7 @@ export function StudentBookingsView() {
   const [myBookings, setMyBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [bookingError, setBookingError] = useState('');
+  const [qrBooking, setQrBooking] = useState(null);
 
   // Availability check
   const [conflicts, setConflicts] = useState([]);
@@ -43,7 +44,6 @@ export function StudentBookingsView() {
   });
   const [durationHours, setDurationHours] = useState(2);
   const [file, setFile] = useState(null);
-  const [cancelConfirm, setCancelConfirm] = useState({ isOpen: false, bookingId: null });
 
   useEffect(() => {
     if (location.state?.action === 'create') setActiveTab('create');
@@ -88,6 +88,9 @@ export function StudentBookingsView() {
 
     try {
       await bookingService.cancelBooking(user.token, id);
+      if (qrBooking?.id === id) {
+        setQrBooking(null);
+      }
       fetchMyBookings();
       showToast({
         variant: 'success',
@@ -196,6 +199,41 @@ export function StudentBookingsView() {
     () => isOutsideBookingWindow(formData.endTime),
     [formData.endTime]
   );
+
+  const qrImageUrl = useMemo(
+    () => qrBooking?.checkInPayload
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrBooking.checkInPayload)}`
+      : '',
+    [qrBooking]
+  );
+
+  const formatCheckInTimestamp = (timestamp) => {
+    if (!timestamp) {
+      return '';
+    }
+    return new Date(timestamp).toLocaleString();
+  };
+
+  const handleCopyCheckInCode = async () => {
+    if (!qrBooking?.checkInPayload) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(qrBooking.checkInPayload);
+      showToast({
+        variant: 'success',
+        title: 'Check-In Code Copied',
+        message: 'The booking QR payload is ready to paste into the verification screen.',
+      });
+    } catch (error) {
+      showToast({
+        variant: 'error',
+        title: 'Copy Failed',
+        message: 'Unable to copy the QR code data right now.',
+      });
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -409,19 +447,39 @@ export function StudentBookingsView() {
                           }}>
                             {bk.status === 'APPROVED' ? 'ACCEPTED' : bk.status}
                           </span>
+                          {bk.checkedIn && (
+                            <div style={{ marginTop: '6px', fontSize: '0.74rem', fontWeight: '600', color: '#166534' }}>
+                              Checked in
+                            </div>
+                          )}
                         </td>
                         <td style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                          {bk.adminReason || bk.purpose}
+                          {bk.checkedIn
+                            ? `Checked in on ${formatCheckInTimestamp(bk.checkedInAt)}`
+                            : bk.adminReason || bk.purpose}
                         </td>
                         <td style={{ padding: '16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            {(bk.status === 'PENDING' || bk.status === 'APPROVED') && (
+                            {bk.status === 'APPROVED' && bk.checkInPayload && (
+                              <button
+                                onClick={() => setQrBooking(bk)}
+                                style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
+                              >
+                                View QR
+                              </button>
+                            )}
+                            {!bk.checkedIn && (bk.status === 'PENDING' || bk.status === 'APPROVED') && (
                               <button 
                                 onClick={() => handleCancelBooking(bk.id)}
                                 style={{ background: '#fee2e2', color: '#ef4444', border: '1px solid #f87171', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
                               >
                                 Cancel
                               </button>
+                            )}
+                            {bk.checkedIn && (
+                              <span style={{ background: '#dcfce7', color: '#166534', border: '1px solid #86efac', padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700' }}>
+                                Checked In
+                              </span>
                             )}
                           </div>
                         </td>
@@ -663,16 +721,86 @@ export function StudentBookingsView() {
           </div>
         )}
       </div>
-      <ConfirmationModal
-        isOpen={cancelConfirm.isOpen}
-        onClose={() => setCancelConfirm({ isOpen: false, bookingId: null })}
-        onConfirm={executeCancel}
-        type="danger"
-        title="Cancel Booking"
-        message="Are you sure you want to cancel this booking? This action cannot be undone."
-        confirmLabel="Cancel Booking"
-        cancelLabel="Keep Booking"
-      />
+      {qrBooking && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div
+            onClick={() => setQrBooking(null)}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.48)', backdropFilter: 'blur(4px)' }}
+          />
+          <div style={{
+            position: 'relative',
+            zIndex: 1,
+            width: 'min(520px, calc(100vw - 32px))',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '20px',
+            padding: '28px',
+            boxShadow: '0 30px 60px rgba(15, 23, 42, 0.25)',
+            color: 'var(--text-primary)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px'
+          }}>
+            <div>
+              <div style={{ fontSize: '0.78rem', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#2563eb', marginBottom: '8px' }}>
+                Booking Check-In
+              </div>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: '800', marginBottom: '6px' }}>{qrBooking.resourceName}</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>
+                Show this QR code to the manager on {qrBooking.bookingDate} during your approved booking window.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: '20px', alignItems: 'center' }}>
+              <div style={{ background: '#ffffff', borderRadius: '18px', padding: '16px', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '220px' }}>
+                {qrImageUrl ? (
+                  <img
+                    src={qrImageUrl}
+                    alt={`QR code for booking ${qrBooking.id}`}
+                    style={{ width: '100%', maxWidth: '220px', aspectRatio: '1 / 1', objectFit: 'contain' }}
+                  />
+                ) : (
+                  <span style={{ color: '#64748b', fontSize: '0.9rem', textAlign: 'center' }}>QR code unavailable</span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ background: 'var(--bg-alt)', borderRadius: '14px', padding: '14px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>Check-In Code</div>
+                  <div style={{ fontFamily: 'Consolas, monospace', fontSize: '0.8rem', lineHeight: 1.5, wordBreak: 'break-all', color: 'var(--text-muted)' }}>
+                    {qrBooking.checkInPayload}
+                  </div>
+                </div>
+
+                {qrBooking.checkedIn ? (
+                  <div style={{ background: '#dcfce7', border: '1px solid #86efac', color: '#166534', borderRadius: '14px', padding: '14px', fontSize: '0.9rem', fontWeight: '600' }}>
+                    Checked in on {formatCheckInTimestamp(qrBooking.checkedInAt)}
+                  </div>
+                ) : (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+                    If the QR image does not load, the manager can still paste the check-in code into the verification box.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleCopyCheckInCode}
+                style={{ background: 'var(--bg-alt)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '10px 16px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+              >
+                Copy Code
+              </button>
+              <button
+                onClick={() => setQrBooking(null)}
+                style={{ background: '#2563eb', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '700' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

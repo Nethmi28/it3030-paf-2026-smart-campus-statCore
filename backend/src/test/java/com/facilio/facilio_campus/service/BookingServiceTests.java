@@ -1,8 +1,10 @@
 package com.facilio.facilio_campus.service;
 
+import com.facilio.facilio_campus.dto.BookingCheckInRequestDTO;
 import com.facilio.facilio_campus.dto.BookingRequestDTO;
 import com.facilio.facilio_campus.dto.BookingResponseDTO;
 import com.facilio.facilio_campus.dto.BookingStatusUpdateDTO;
+import com.facilio.facilio_campus.model.BookingAuditAction;
 import com.facilio.facilio_campus.model.BookingAuditLog;
 import com.facilio.facilio_campus.model.Booking;
 import com.facilio.facilio_campus.model.BookingStatus;
@@ -27,6 +29,8 @@ import java.time.LocalTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -75,6 +79,7 @@ class BookingServiceTests {
         booking.setPurpose("Team meeting");
         booking.setExpectedAttendees(15);
         booking.setStatus(BookingStatus.PENDING);
+        booking.setCheckedIn(false);
         booking.setCreatedAt(LocalDateTime.now().minusHours(2));
     }
 
@@ -117,7 +122,7 @@ class BookingServiceTests {
     }
 
     @Test
-    void approvingBookingReturnsApprovedStatusAndRecordsAudit() {
+    void approvingBookingGeneratesCheckInPayload() {
         BookingStatusUpdateDTO request = new BookingStatusUpdateDTO();
         request.setStatus(BookingStatus.APPROVED);
 
@@ -127,6 +132,28 @@ class BookingServiceTests {
         BookingResponseDTO response = bookingService.updateBookingStatus(booking.getId(), request);
 
         assertEquals(BookingStatus.APPROVED, response.getStatus());
+        assertNotNull(response.getCheckInPayload());
+        assertFalse(response.getCheckInPayload().isBlank());
+        assertFalse(Boolean.TRUE.equals(response.getCheckedIn()));
+        verify(bookingAuditLogRepository).save(any(BookingAuditLog.class));
+    }
+
+    @Test
+    void verifyCheckInMarksApprovedBookingAsCheckedIn() {
+        booking.setStatus(BookingStatus.APPROVED);
+        booking.setCheckInToken("demo-token-123");
+
+        BookingCheckInRequestDTO request = new BookingCheckInRequestDTO();
+        request.setQrPayload("FACILIO-CHECKIN|25|demo-token-123");
+
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        BookingResponseDTO response = bookingService.verifyCheckIn(booking.getId(), request, "manager@campus.edu");
+
+        assertEquals(Boolean.TRUE, response.getCheckedIn());
+        assertNotNull(response.getCheckedInAt());
+        assertEquals("manager@campus.edu", response.getCheckedInBy());
         verify(bookingAuditLogRepository).save(any(BookingAuditLog.class));
     }
 

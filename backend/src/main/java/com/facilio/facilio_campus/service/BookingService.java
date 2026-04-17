@@ -1,6 +1,7 @@
 package com.facilio.facilio_campus.service;
 
 import com.facilio.facilio_campus.dto.BookingAuditLogResponseDTO;
+import com.facilio.facilio_campus.dto.BookingCheckInRequestDTO;
 import com.facilio.facilio_campus.dto.BookingRequestDTO;
 import com.facilio.facilio_campus.dto.BookingResponseDTO;
 import com.facilio.facilio_campus.dto.BookingStatusUpdateDTO;
@@ -35,6 +36,8 @@ import java.util.stream.Collectors;
 public class BookingService {
 
     private static final LocalTime BOOKING_DAY_END_TIME = LocalTime.of(17, 0);
+    private static final int CHECK_IN_OPEN_BUFFER_MINUTES = 30;
+    private static final String CHECK_IN_PREFIX = "FACILIO-CHECKIN";
 
     @Autowired
     private BookingRepository bookingRepository;
@@ -175,6 +178,18 @@ public class BookingService {
             booking.setAdminReason(updateDTO.getAdminReason());
         }
 
+        if (updateDTO.getStatus() == BookingStatus.APPROVED) {
+            booking.setCheckInToken(generateCheckInToken());
+            booking.setCheckedIn(false);
+            booking.setCheckedInAt(null);
+            booking.setCheckedInBy(null);
+        } else if (updateDTO.getStatus() == BookingStatus.REJECTED) {
+            booking.setCheckInToken(null);
+            booking.setCheckedIn(false);
+            booking.setCheckedInAt(null);
+            booking.setCheckedInBy(null);
+        }
+
         Booking savedBooking = bookingRepository.save(booking);
         recordAuditEvent(
                 savedBooking,
@@ -201,13 +216,70 @@ public class BookingService {
              throw new IllegalArgumentException("Cannot cancel booking with current status");
         }
 
+        if (Boolean.TRUE.equals(booking.getCheckedIn())) {
+            throw new IllegalArgumentException("Cannot cancel a booking that has already been checked in");
+        }
+
         booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCheckInToken(null);
+        booking.setCheckedIn(false);
+        booking.setCheckedInAt(null);
+        booking.setCheckedInBy(null);
         Booking savedBooking = bookingRepository.save(booking);
         recordAuditEvent(
                 savedBooking,
                 BookingAuditAction.CANCELLED,
                 userEmail,
                 "Booking cancelled by the requester"
+        );
+        return mapToDTO(savedBooking);
+    }
+
+    @Transactional
+    public BookingResponseDTO verifyCheckIn(Long id, BookingCheckInRequestDTO request, String verifierEmail) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+
+        if (request == null || request.getQrPayload() == null || request.getQrPayload().trim().isEmpty()) {
+            throw new IllegalArgumentException("QR code data is required");
+        }
+
+        if (booking.getStatus() != BookingStatus.APPROVED) {
+            throw new IllegalArgumentException("Only approved bookings can be checked in");
+        }
+
+        if (Boolean.TRUE.equals(booking.getCheckedIn())) {
+            throw new IllegalArgumentException("This booking has already been checked in");
+        }
+
+        if (!LocalDate.now().equals(booking.getBookingDate())) {
+            throw new IllegalArgumentException("Check-in is only available on the booking date");
+        }
+
+        LocalTime now = LocalTime.now();
+        LocalTime checkInOpenTime = booking.getStartTime().minusMinutes(CHECK_IN_OPEN_BUFFER_MINUTES);
+        if (now.isBefore(checkInOpenTime) || !now.isBefore(booking.getEndTime())) {
+            throw new IllegalArgumentException("Check-in is only available from 30 minutes before the booking starts until it ends");
+        }
+
+        ParsedCheckInPayload payload = parseCheckInPayload(request.getQrPayload());
+        if (!booking.getId().equals(payload.bookingId())) {
+            throw new IllegalArgumentException("This QR code does not match the selected booking");
+        }
+
+        if (booking.getCheckInToken() == null || !booking.getCheckInToken().equals(payload.token())) {
+            throw new IllegalArgumentException("This QR code is invalid or expired");
+        }
+
+        booking.setCheckedIn(true);
+        booking.setCheckedInAt(LocalDateTime.now());
+        booking.setCheckedInBy(verifierEmail);
+        Booking savedBooking = bookingRepository.save(booking);
+        recordAuditEvent(
+                savedBooking,
+                BookingAuditAction.CHECKED_IN,
+                verifierEmail,
+                "QR check-in verified successfully"
         );
         return mapToDTO(savedBooking);
     }
@@ -229,8 +301,39 @@ public class BookingService {
             booking.getAdminReason(),
             booking.getFacultyApprovalPdf(),
             booking.getAdditionalRequirements(),
+            buildCheckInPayload(booking),
+            booking.getCheckedIn(),
+            booking.getCheckedInAt(),
+            booking.getCheckedInBy(),
             booking.getCreatedAt()
         );
+    }
+
+    private String generateCheckInToken() {
+        return UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private String buildCheckInPayload(Booking booking) {
+        if (booking.getCheckInToken() == null || booking.getCheckInToken().isBlank()) {
+            return null;
+        }
+        return CHECK_IN_PREFIX + "|" + booking.getId() + "|" + booking.getCheckInToken();
+    }
+
+    private ParsedCheckInPayload parseCheckInPayload(String qrPayload) {
+        String[] parts = qrPayload.trim().split("\\|", 3);
+        if (parts.length != 3 || !CHECK_IN_PREFIX.equals(parts[0])) {
+            throw new IllegalArgumentException("Invalid QR check-in code");
+        }
+
+        try {
+            return new ParsedCheckInPayload(Long.parseLong(parts[1]), parts[2]);
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("Invalid QR check-in code");
+        }
+    }
+
+    private record ParsedCheckInPayload(Long bookingId, String token) {
     }
 
     private void recordAuditEvent(Booking booking, BookingAuditAction action, String actorEmail, String details) {

@@ -1,6 +1,7 @@
 package com.facilio.facilio_campus.controller;
 
 import com.facilio.facilio_campus.dto.BookingAuditLogResponseDTO;
+import com.facilio.facilio_campus.dto.BookingCheckInRequestDTO;
 import com.facilio.facilio_campus.dto.BookingRequestDTO;
 import com.facilio.facilio_campus.dto.BookingResponseDTO;
 import com.facilio.facilio_campus.dto.BookingStatusUpdateDTO;
@@ -108,4 +109,19 @@ public class BookingController {
         }
     }
 
+    @PostMapping("/{id}/check-in")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER')")
+    public ResponseEntity<?> verifyCheckIn(@PathVariable Long id, @RequestBody BookingCheckInRequestDTO request, Authentication authentication) {
+        try {
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User must be authenticated");
+            }
+            BookingResponseDTO response = bookingService.verifyCheckIn(id, request, authentication.getName());
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred");
+        }
+    }
 }

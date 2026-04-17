@@ -105,5 +105,19 @@ export const bookingService = {
             throw new Error(errBody || 'Failed to cancel booking');
         }
         return response.json();
+    },
+
+    // Verify booking QR check-in (Manager/Admin)
+    verifyCheckIn: async (token, bookingId, qrPayload) => {
+        const response = await fetch(`${API_BASE}/api/bookings/${bookingId}/check-in`, {
+            method: 'POST',
+            headers: getHeaders(token),
+            body: JSON.stringify({ qrPayload })
+        });
+        if (!response.ok) {
+            const errBody = await response.text();
+            throw new Error(errBody || 'Failed to verify check-in');
+        }
+        return response.json();
     }
 };

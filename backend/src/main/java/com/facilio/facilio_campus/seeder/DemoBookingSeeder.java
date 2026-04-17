@@ -144,7 +144,9 @@ public class DemoBookingSeeder implements CommandLineRunner {
         booking.setAdditionalRequirements(spec.additionalRequirements());
         booking.setStatus(spec.status());
 
-        if (spec.status() == BookingStatus.CANCELLED) {
+        if (spec.status() == BookingStatus.APPROVED) {
+            booking.setCheckInToken(("demo-" + spec.resourceName()).replaceAll("[^a-zA-Z0-9]", "").toLowerCase(Locale.ROOT));
+        } else if (spec.status() == BookingStatus.CANCELLED) {
             booking.setAdminReason("Demo booking cancelled for showcase purposes.");
         }
 
