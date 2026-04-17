@@ -35,18 +35,18 @@ public class ResourceSeeder implements CommandLineRunner {
     private void seedResources() {
         List<Resource> resources = new ArrayList<>();
 
-        // Images 
-        String labImg = "/images/lab.png";
-        String libraryImg = "/images/library.png";
-        String auditoriumImg = "/images/auditorium.png";
-        String equipImg = "/images/equipment.png";
+        // Images
+        String labImg = "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&q=80&w=800";
+        String libraryImg = "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&q=80&w=800";
+        String auditoriumImg = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=800";
+        String equipImg = "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&q=80&w=800";
 
-        // Faculty-specific Lecture Hall Images
-        String lecCompImg = "/images/lec_computing.png";
-        String lecBusImg = "/images/lec_business.png";
-        String lecEngImg = "/images/lec_engineering.png";
-        String lecArchImg = "/images/lec_architecture.png";
-        String lecHumImg = "/images/lec_humanities.png";
+        // Faculty-specific Lecture Hall Images (Stable & Simple)
+        String lecCompImg = "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800";
+        String lecBusImg = "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&q=80&w=800";
+        String lecEngImg = "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=800";
+        String lecArchImg = "https://images.unsplash.com/photo-1503387762-592dee5814e?auto=format&fit=crop&q=80&w=800";
+        String lecHumImg = "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80&w=800";
 
         // 5 Lecture Rooms per Faculty with specific prefixes
         
@@ -79,16 +79,16 @@ public class ResourceSeeder implements CommandLineRunner {
 
         // Sports equipments
         String sportsCategory = "Sports equipments";
-        resources.add(new Resource("Basketball", "EQUIPMENTS", sportsCategory, "Sports Complex", 12, "Available", "Standard basketball for matches.", "/images/basketball.png", Arrays.asList("Regulation size", "Vibrant color")));
-        resources.add(new Resource("Volleyball", "EQUIPMENTS", sportsCategory, "Sports Complex", 12, "Available", "Professional volleyball.", "/images/volleyball.png", Arrays.asList("Soft touch", "Indoor/Outdoor")));
-        resources.add(new Resource("Carrom Board", "EQUIPMENTS", sportsCategory, "Student Lounge", 4, "Available", "Wooden carrom board with pieces.", "/images/carrom.png", Arrays.asList("Smooth surface", "Complete set")));
-        resources.add(new Resource("Chess Set", "EQUIPMENTS", sportsCategory, "Student Lounge", 2, "Available", "Professional chess board and pieces.", "/images/chess.png", Arrays.asList("Weighted pieces", "Foldable board")));
-        resources.add(new Resource("Badminton Set", "EQUIPMENTS", sportsCategory, "Sports Complex", 4, "Available", "Pair of rackets and shuttlecocks.", "/images/badminton.png", Arrays.asList("Lightweight", "Includes shuttlecocks")));
-        resources.add(new Resource("Main Gym Facility", "FACILITY", sportsCategory, "Lower Ground", 50, "Available", "Fully equipped modern gym.", "/images/gym.png", Arrays.asList("Cardio", "Weights", "Trainer available")));
+        resources.add(new Resource("Basketball", "EQUIPMENTS", sportsCategory, "Sports Complex", 12, "Available", "Standard basketball for matches.", "https://images.unsplash.com/photo-1519861531473-9200262188bf?auto=format&fit=crop&q=80&w=800", Arrays.asList("Regulation size", "Vibrant color")));
+        resources.add(new Resource("Volleyball", "EQUIPMENTS", sportsCategory, "Sports Complex", 12, "Available", "Professional volleyball.", "https://images.unsplash.com/photo-1592656094267-764a45159577?auto=format&fit=crop&q=80&w=800", Arrays.asList("Soft touch", "Indoor/Outdoor")));
+        resources.add(new Resource("Carrom Board", "EQUIPMENTS", sportsCategory, "Student Lounge", 4, "Available", "Wooden carrom board with pieces.", "https://images.unsplash.com/photo-1577748651212-32abb372993d?auto=format&fit=crop&q=80&w=800", Arrays.asList("Smooth surface", "Complete set")));
+        resources.add(new Resource("Chess Set", "EQUIPMENTS", sportsCategory, "Student Lounge", 2, "Available", "Professional chess board and pieces.", "https://images.unsplash.com/photo-1528819622765-d6bcf132f793?auto=format&fit=crop&q=80&w=800", Arrays.asList("Weighted pieces", "Foldable board")));
+        resources.add(new Resource("Badminton Set", "EQUIPMENTS", sportsCategory, "Sports Complex", 4, "Available", "Pair of rackets and shuttlecocks.", "https://images.unsplash.com/photo-1521537634581-0dced2fee2ef?auto=format&fit=crop&q=80&w=800", Arrays.asList("Lightweight", "Includes shuttlecocks")));
+        resources.add(new Resource("Main Gym Facility", "FACILITY", sportsCategory, "Lower Ground", 50, "Available", "Fully equipped modern gym.", "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=800", Arrays.asList("Cardio", "Weights", "Trainer available")));
 
         // Student Services - Transportation
         String studentServices = "Student Services";
-        String busImg = "/images/campus_bus.png";
+        String busImg = "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=800";
         String busDesc = "Morning: Arrives at campus at 8:00 AM. Evening: Departs from campus at 6:00 PM. Follows university schedule.";
         resources.add(new Resource("Bus - Kolpity Route", "TRANSPORTATION", studentServices, "Bus Bay 01", 50, "Available", busDesc, busImg, Arrays.asList("AC", "WIFI", "GPS")));
         resources.add(new Resource("Bus - Panadura Route", "TRANSPORTATION", studentServices, "Bus Bay 02", 50, "Available", busDesc, busImg, Arrays.asList("AC", "WIFI", "GPS")));

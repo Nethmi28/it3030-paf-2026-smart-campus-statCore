@@ -15,16 +15,22 @@ public class ResourceService {
     @Autowired
     private ResourceRepository resourceRepository;
 
+    private final String UPLOAD_DIR = "uploads/resources/";
+    private static final List<String> ALLOWED_MIME_TYPES = java.util.Arrays.asList(
+        "image/jpeg", "image/png", "image/gif", "image/webp", "image/jpg"
+    );
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
     public List<ResourceDTO> getAllResources(String faculty, Integer minCapacity) {
         List<Resource> resources;
         if (faculty != null && minCapacity != null) {
-            resources = resourceRepository.findByFacultyAndCapacityGreaterThanEqual(faculty, minCapacity);
+            resources = resourceRepository.findByFacultyAndCapacityGreaterThanEqualOrderByIdAsc(faculty, minCapacity);
         } else if (faculty != null) {
-            resources = resourceRepository.findByFaculty(faculty);
+            resources = resourceRepository.findByFacultyOrderByIdAsc(faculty);
         } else if (minCapacity != null) {
-            resources = resourceRepository.findByCapacityGreaterThanEqual(minCapacity);
+            resources = resourceRepository.findByCapacityGreaterThanEqualOrderByIdAsc(minCapacity);
         } else {
-            resources = resourceRepository.findAll();
+            resources = resourceRepository.findAllByOrderByIdAsc();
         }
         return resources.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
@@ -35,13 +41,20 @@ public class ResourceService {
                 .orElseThrow(() -> new RuntimeException("Resource not found"));
     }
 
-    public ResourceDTO createResource(ResourceDTO resourceDTO) {
+    public ResourceDTO createResource(ResourceDTO resourceDTO, org.springframework.web.multipart.MultipartFile image) throws java.io.IOException {
         Resource resource = convertToEntity(resourceDTO);
+        
+        if (image != null && !image.isEmpty()) {
+            validateFile(image);
+            String imageUrl = saveImage(image);
+            resource.setImageUrl(imageUrl);
+        }
+        
         Resource saved = resourceRepository.save(resource);
         return convertToDTO(saved);
     }
 
-    public ResourceDTO updateResource(Long id, ResourceDTO resourceDTO) {
+    public ResourceDTO updateResource(Long id, ResourceDTO resourceDTO, org.springframework.web.multipart.MultipartFile image) throws java.io.IOException {
         Resource existing = resourceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Resource not found"));
         
@@ -52,11 +65,42 @@ public class ResourceService {
         existing.setCapacity(resourceDTO.getCapacity());
         existing.setStatus(resourceDTO.getStatus());
         existing.setDescription(resourceDTO.getDescription());
-        existing.setImageUrl(resourceDTO.getImageUrl());
         existing.setAmenities(resourceDTO.getAmenities());
+        
+        if (image != null && !image.isEmpty()) {
+            validateFile(image);
+            String imageUrl = saveImage(image);
+            existing.setImageUrl(imageUrl);
+        } else if (resourceDTO.getImageUrl() != null) {
+            existing.setImageUrl(resourceDTO.getImageUrl());
+        }
         
         Resource updated = resourceRepository.save(existing);
         return convertToDTO(updated);
+    }
+
+    private void validateFile(org.springframework.web.multipart.MultipartFile file) {
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new IllegalArgumentException("File " + file.getOriginalFilename() + " exceeds 5MB limit");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_MIME_TYPES.contains(contentType.toLowerCase())) {
+            throw new IllegalArgumentException("File " + file.getOriginalFilename() + " is not an allowed image type");
+        }
+    }
+
+    private String saveImage(org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
+        java.nio.file.Path uploadPath = java.nio.file.Paths.get(UPLOAD_DIR);
+        if (!java.nio.file.Files.exists(uploadPath)) {
+            java.nio.file.Files.createDirectories(uploadPath);
+        }
+
+        String fileName = java.util.UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+        java.nio.file.Path filePath = uploadPath.resolve(fileName);
+        java.nio.file.Files.copy(file.getInputStream(), filePath);
+        
+        // Return URL path that can be used by the frontend to fetch the image
+        return "/api/resources/images/" + fileName;
     }
 
     public void deleteResource(Long id) {
