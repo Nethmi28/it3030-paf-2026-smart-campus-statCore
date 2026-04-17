@@ -1,16 +1,24 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { CalendarPlus, CalendarClock, CheckCircle, ArrowLeft, Building, Users, Clock, FileText, AlertCircle, UploadCloud } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Building, Users, Clock, FileText, AlertCircle, UploadCloud } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { bookingService } from '../../services/bookingService';
+import ManagerBookingsView from './ManagerBookingsView';
+import {
+  BOOKING_DAY_END_TIME,
+  LAST_BOOKING_SLOT_LABEL,
+  formatBookingRange,
+  formatBookingTime,
+  isOutsideBookingWindow,
+} from '../../utils/bookingTime';
 
 const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8089';
-import ManagerBookingsView from './ManagerBookingsView';
 
 export function StudentBookingsView() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const { showToast, showConfirm } = useToast();
 
   const [activeTab, setActiveTab] = useState(location.state?.action === 'create' ? 'create' : 'view');
   const [resources, setResources] = useState([]);
@@ -67,12 +75,30 @@ export function StudentBookingsView() {
   };
 
   const handleCancelBooking = async (id) => {
-    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+    const confirmed = await showConfirm({
+      title: 'Cancel Booking',
+      message: 'Are you sure you want to cancel this booking?',
+      confirmLabel: 'Cancel Booking',
+      cancelLabel: 'Keep Booking',
+      confirmTone: 'danger',
+    });
+
+    if (!confirmed) return;
+
     try {
       await bookingService.cancelBooking(user.token, id);
       fetchMyBookings();
+      showToast({
+        variant: 'success',
+        title: 'Booking Cancelled',
+        message: 'The booking was cancelled successfully.',
+      });
     } catch(err) {
-      alert("Failed to cancel booking: " + err.message);
+      showToast({
+        variant: 'error',
+        title: 'Cancellation Failed',
+        message: err.message || 'Failed to cancel the booking.',
+      });
     }
   };
 
@@ -98,6 +124,9 @@ export function StudentBookingsView() {
     [resources, formData.resourceId]);
 
   const isAuditorium = selectedResource?.name?.toLowerCase().includes('auditorium');
+  const effectiveDurationHours = isAuditorium ? durationHours : 2;
+  const attendeeLimit = selectedResource?.capacity ?? null;
+  const lastBookingErrorMessage = `Bookings must end by ${formatBookingTime(BOOKING_DAY_END_TIME)}. The last booking period is ${LAST_BOOKING_SLOT_LABEL}.`;
 
   // Fetch availability when date changes
   useEffect(() => {
@@ -125,7 +154,7 @@ export function StudentBookingsView() {
       const [hours, mins] = formData.startTime.split(':');
       const startDate = new Date();
       startDate.setHours(parseInt(hours), parseInt(mins), 0);
-      startDate.setHours(startDate.getHours() + durationHours); // Add duration
+      startDate.setHours(startDate.getHours() + effectiveDurationHours);
 
       const newEndHours = startDate.getHours().toString().padStart(2, '0');
       const newEndMins = startDate.getMinutes().toString().padStart(2, '0');
@@ -134,8 +163,10 @@ export function StudentBookingsView() {
       if (formData.endTime !== calculatedEndTime) {
         setFormData(prev => ({ ...prev, endTime: calculatedEndTime }));
       }
+    } else if (formData.endTime) {
+      setFormData(prev => ({ ...prev, endTime: '' }));
     }
-  }, [formData.startTime, durationHours]);
+  }, [formData.startTime, formData.endTime, effectiveDurationHours]);
 
   // Determine if there is a conflict right now
   const hasConflict = useMemo(() => {
@@ -160,8 +191,46 @@ export function StudentBookingsView() {
     });
   }, [formData.startTime, formData.endTime, conflicts]);
 
+  const hasLateTimeSelection = useMemo(
+    () => isOutsideBookingWindow(formData.endTime),
+    [formData.endTime]
+  );
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === 'resourceId') {
+      const nextResource = resources.find(resource => resource.id.toString() === value.toString());
+
+      setFormData(prev => ({
+        ...prev,
+        resourceId: value,
+        expectedAttendees: prev.expectedAttendees && nextResource?.capacity
+          ? String(Math.min(Number(prev.expectedAttendees), nextResource.capacity))
+          : prev.expectedAttendees,
+      }));
+      return;
+    }
+
+    if (name === 'expectedAttendees') {
+      if (value === '') {
+        setFormData(prev => ({ ...prev, expectedAttendees: '' }));
+        return;
+      }
+
+      const numericValue = Number(value);
+
+      if (Number.isNaN(numericValue)) {
+        return;
+      }
+
+      const sanitizedValue = Math.max(1, Math.trunc(numericValue));
+      const limitedValue = attendeeLimit ? Math.min(sanitizedValue, attendeeLimit) : sanitizedValue;
+
+      setFormData(prev => ({ ...prev, expectedAttendees: String(limitedValue) }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -173,12 +242,36 @@ export function StudentBookingsView() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (hasLateTimeSelection) {
+      showToast({
+        variant: 'warning',
+        title: 'Invalid Booking Time',
+        message: lastBookingErrorMessage,
+      });
+      return;
+    }
     if (hasConflict) {
-      alert("Cannot submit: The resource is already booked for the selected time.");
+      showToast({
+        variant: 'error',
+        title: 'Time Slot Unavailable',
+        message: 'The resource is already booked for the selected time.',
+      });
+      return;
+    }
+    if (attendeeLimit && Number(formData.expectedAttendees) > attendeeLimit) {
+      showToast({
+        variant: 'warning',
+        title: 'Too Many Attendees',
+        message: `Expected attendees cannot exceed the selected resource capacity of ${attendeeLimit}.`,
+      });
       return;
     }
     if (isAuditorium && !file) {
-      alert("Auditorium bookings require a PDF approval file.");
+      showToast({
+        variant: 'warning',
+        title: 'Approval File Required',
+        message: 'Auditorium bookings require a PDF approval file.',
+      });
       return;
     }
 
@@ -193,7 +286,11 @@ export function StudentBookingsView() {
         additionalRequirements: formData.additionalRequirements
       }, isAuditorium ? file : null);
 
-      alert('Booking request submitted successfully!');
+      showToast({
+        variant: 'success',
+        title: 'Booking Submitted',
+        message: 'Your booking request was submitted successfully.',
+      });
       setActiveTab('view');
       // Reset form
       setFormData({
@@ -202,7 +299,11 @@ export function StudentBookingsView() {
       setFile(null);
       setDurationHours(2);
     } catch (err) {
-      alert(`Error submitting booking: ${err.message}`);
+      showToast({
+        variant: 'error',
+        title: 'Booking Failed',
+        message: err.message || 'Unable to submit the booking request.',
+      });
     }
   };
 
@@ -298,7 +399,7 @@ export function StudentBookingsView() {
                       <tr key={bk.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                         <td style={{ padding: '16px', fontWeight: '500' }}>{bk.resourceName}</td>
                         <td style={{ padding: '16px', color: 'var(--text-muted)' }}>{bk.bookingDate}</td>
-                        <td style={{ padding: '16px', color: 'var(--text-muted)' }}>{bk.startTime} - {bk.endTime}</td>
+                        <td style={{ padding: '16px', color: 'var(--text-muted)' }}>{formatBookingRange(bk.startTime, bk.endTime)}</td>
                         <td style={{ padding: '16px' }}>
                           <span style={{
                             padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700',
@@ -308,16 +409,20 @@ export function StudentBookingsView() {
                             {bk.status === 'APPROVED' ? 'ACCEPTED' : bk.status}
                           </span>
                         </td>
-                        <td style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>{bk.adminReason || bk.purpose}</td>
+                        <td style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          {bk.adminReason || bk.purpose}
+                        </td>
                         <td style={{ padding: '16px' }}>
-                          {bk.status === 'PENDING' && (
-                            <button 
-                              onClick={() => handleCancelBooking(bk.id)}
-                              style={{ background: '#fee2e2', color: '#ef4444', border: '1px solid #f87171', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
-                            >
-                              Cancel
-                            </button>
-                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            {(bk.status === 'PENDING' || bk.status === 'APPROVED') && (
+                              <button 
+                                onClick={() => handleCancelBooking(bk.id)}
+                                style={{ background: '#fee2e2', color: '#ef4444', border: '1px solid #f87171', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
+                              >
+                                Cancel
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -426,6 +531,10 @@ export function StudentBookingsView() {
                   )}
                 </div>
 
+                <div style={{ background: 'var(--bg-color)', padding: '12px 14px', borderRadius: '10px', border: '1px dashed var(--border-color)', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  Booking hours end at {formatBookingTime(BOOKING_DAY_END_TIME)}. Last booking period: {LAST_BOOKING_SLOT_LABEL}.
+                </div>
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>End Time</label>
                   <input
@@ -445,10 +554,17 @@ export function StudentBookingsView() {
                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {conflicts.map((slot, i) => (
                            <span key={i} style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', border: '1px solid #fecaca' }}>
-                             {slot.startTime} - {slot.endTime}
+                             {formatBookingRange(slot.startTime, slot.endTime)}
                            </span>
                         ))}
                      </div>
+                  </div>
+                )}
+
+                {hasLateTimeSelection && (
+                  <div style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.35)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
+                    <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <span>{lastBookingErrorMessage}</span>
                   </div>
                 )}
 
@@ -478,9 +594,15 @@ export function StudentBookingsView() {
                         required
                         placeholder="Number of guests"
                         min="1"
+                        max={attendeeLimit || undefined}
                         style={{ ...inputStyle, paddingLeft: '38px' }}
                       />
                     </div>
+                    {attendeeLimit && (
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        Maximum {attendeeLimit} attendees for the selected resource.
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -511,13 +633,13 @@ export function StudentBookingsView() {
                     <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '12px' }}>Reservation Summary</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                       <span>Date:</span> <span style={{ color: 'var(--text-primary)' }}>{formData.date || '--'}</span>
-                      <span>Time:</span> <span style={{ color: 'var(--text-primary)' }}>{formData.startTime ? `${formData.startTime} - ${formData.endTime}` : '--'}</span>
+                      <span>Time:</span> <span style={{ color: 'var(--text-primary)' }}>{formData.startTime ? formatBookingRange(formData.startTime, formData.endTime) : '--'}</span>
                       <span>Guests:</span> <span style={{ color: 'var(--text-primary)' }}>{formData.expectedAttendees || '--'}</span>
                     </div>
                   </div>
 
                   {(() => {
-                    const isDisabled = hasConflict || !formData.date || !formData.startTime || !formData.resourceId || !formData.expectedAttendees || !formData.purpose || (isAuditorium && !file);
+                    const isDisabled = hasConflict || hasLateTimeSelection || !formData.date || !formData.startTime || !formData.resourceId || !formData.expectedAttendees || !formData.purpose || (isAuditorium && !file);
                     return (
                       <button
                         type="submit"

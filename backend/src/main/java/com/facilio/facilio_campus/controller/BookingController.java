@@ -1,5 +1,6 @@
 package com.facilio.facilio_campus.controller;
 
+import com.facilio.facilio_campus.dto.BookingAuditLogResponseDTO;
 import com.facilio.facilio_campus.dto.BookingRequestDTO;
 import com.facilio.facilio_campus.dto.BookingResponseDTO;
 import com.facilio.facilio_campus.dto.BookingStatusUpdateDTO;
@@ -70,6 +71,12 @@ public class BookingController {
         return ResponseEntity.ok(allBookings);
     }
 
+    @GetMapping("/audit")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER')")
+    public ResponseEntity<List<BookingAuditLogResponseDTO>> getRecentAuditLogs() {
+        return ResponseEntity.ok(bookingService.getRecentAuditLogs());
+    }
+
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MANAGER')")
     public ResponseEntity<?> updateBookingStatus(@PathVariable Long id, @RequestBody BookingStatusUpdateDTO request) {
@@ -100,4 +107,5 @@ public class BookingController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred");
         }
     }
+
 }
