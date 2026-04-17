@@ -83,7 +83,7 @@ class DemoBookingSeederTests {
         List<Booking> seededBookings = bookingsCaptor.getValue();
         assertEquals(3, seededBookings.size());
         assertTrue(seededBookings.stream().anyMatch(booking ->
-                "BM104".equals(booking.getResource().getName()) && booking.getStatus() == BookingStatus.APPROVED));
+                "BM104".equals(booking.getResource().getName()) && booking.getStatus() == BookingStatus.APPROVED && booking.getCheckInToken() != null));
         assertTrue(seededBookings.stream().anyMatch(booking ->
                 "Main Auditorium".equals(booking.getResource().getName()) && booking.getStatus() == BookingStatus.CANCELLED));
         assertTrue(seededBookings.stream().anyMatch(booking ->

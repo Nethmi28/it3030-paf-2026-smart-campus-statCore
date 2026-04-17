@@ -15,12 +15,18 @@ export default function ManagerBookingsView() {
   const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [loadError, setLoadError] = useState('');
+  const [checkInCode, setCheckInCode] = useState('');
+  const [verifyingCheckIn, setVerifyingCheckIn] = useState(false);
 
   useEffect(() => {
     if (user?.token) {
       fetchBookings();
     }
   }, [user?.token]);
+
+  useEffect(() => {
+    setCheckInCode('');
+  }, [selectedBooking?.id]);
 
   const fetchBookings = async () => {
     if (!user?.token) return;
@@ -97,6 +103,49 @@ export default function ManagerBookingsView() {
         message: err.message || 'Failed to update the booking status.',
       });
     }
+  };
+
+  const handleVerifyCheckIn = async () => {
+    if (!selectedBooking) {
+      return;
+    }
+
+    if (!checkInCode.trim()) {
+      showToast({
+        variant: 'warning',
+        title: 'QR Code Required',
+        message: 'Paste the scanned QR payload before verifying the booking check-in.',
+      });
+      return;
+    }
+
+    setVerifyingCheckIn(true);
+    try {
+      const updatedBooking = await bookingService.verifyCheckIn(user.token, selectedBooking.id, checkInCode.trim());
+      setSelectedBooking(updatedBooking);
+      setCheckInCode('');
+      fetchBookings();
+      showToast({
+        variant: 'success',
+        title: 'Check-In Verified',
+        message: `${updatedBooking.userName} has been checked in successfully.`,
+      });
+    } catch (err) {
+      showToast({
+        variant: 'error',
+        title: 'Check-In Failed',
+        message: err.message || 'Unable to verify the QR check-in right now.',
+      });
+    } finally {
+      setVerifyingCheckIn(false);
+    }
+  };
+
+  const formatCheckInTimestamp = (timestamp) => {
+    if (!timestamp) {
+      return '';
+    }
+    return new Date(timestamp).toLocaleString();
   };
 
   const formatAuditTimestamp = (timestamp) => {
@@ -196,6 +245,65 @@ export default function ManagerBookingsView() {
                </div>
             )}
 
+            {selectedBooking.status === 'APPROVED' && (
+              <div style={{ background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '20px', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '6px' }}>QR Check-In Verification</div>
+                    <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                      Scan the student&apos;s QR code or paste the payload here. Check-in opens 30 minutes before the booking starts.
+                    </div>
+                  </div>
+                  {selectedBooking.checkedIn && (
+                    <span style={{ background: '#dcfce7', color: '#166534', border: '1px solid #86efac', padding: '8px 12px', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '700' }}>
+                      Checked In
+                    </span>
+                  )}
+                </div>
+
+                {selectedBooking.checkedIn ? (
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '16px', color: '#166534', fontSize: '0.9rem', lineHeight: 1.6 }}>
+                    This booking was checked in on <strong>{formatCheckInTimestamp(selectedBooking.checkedInAt)}</strong>
+                    {selectedBooking.checkedInBy ? ` by ${selectedBooking.checkedInBy}` : ''}.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <textarea
+                      value={checkInCode}
+                      onChange={(event) => setCheckInCode(event.target.value)}
+                      placeholder="Paste scanned QR payload here"
+                      rows={4}
+                      style={{
+                        width: '100%',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--bg-card)',
+                        color: 'var(--text-primary)',
+                        padding: '14px',
+                        resize: 'vertical',
+                        outlineColor: '#2563eb',
+                        fontFamily: 'Consolas, monospace',
+                        fontSize: '0.84rem',
+                        lineHeight: 1.5
+                      }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                        Expected format: `FACILIO-CHECKIN|bookingId|token`
+                      </div>
+                      <button
+                        onClick={handleVerifyCheckIn}
+                        disabled={verifyingCheckIn}
+                        style={{ background: '#2563eb', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '10px', cursor: verifyingCheckIn ? 'wait' : 'pointer', fontSize: '0.85rem', fontWeight: '700', opacity: verifyingCheckIn ? 0.72 : 1 }}
+                      >
+                        {verifyingCheckIn ? 'Verifying...' : 'Verify Check-In'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {selectedBooking.status === 'PENDING' && (
               <div style={{ display: 'flex', gap: '16px', marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border-color)', justifyContent: 'flex-end' }}>
                 <button 
@@ -270,6 +378,11 @@ export default function ManagerBookingsView() {
                         }}>
                           {bk.status === 'APPROVED' ? 'ACCEPTED' : bk.status}
                         </span>
+                        {bk.checkedIn && (
+                          <div style={{ marginTop: '6px', fontSize: '0.74rem', fontWeight: '600', color: '#166534' }}>
+                            Checked in
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '16px', textAlign: 'right' }}>
                          <button 

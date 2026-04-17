@@ -21,12 +21,16 @@ public class BookingResponseDTO {
     private String adminReason;
     private String facultyApprovalPdf;
     private String additionalRequirements;
+    private String checkInPayload;
+    private Boolean checkedIn;
+    private LocalDateTime checkedInAt;
+    private String checkedInBy;
     private LocalDateTime createdAt;
     
     // Constructors
     public BookingResponseDTO() {}
 
-    public BookingResponseDTO(Long id, Long userId, String userName, String userEmail, Long resourceId, String resourceName, LocalDate bookingDate, LocalTime startTime, LocalTime endTime, String purpose, Integer expectedAttendees, BookingStatus status, String adminReason, String facultyApprovalPdf, String additionalRequirements, LocalDateTime createdAt) {
+    public BookingResponseDTO(Long id, Long userId, String userName, String userEmail, Long resourceId, String resourceName, LocalDate bookingDate, LocalTime startTime, LocalTime endTime, String purpose, Integer expectedAttendees, BookingStatus status, String adminReason, String facultyApprovalPdf, String additionalRequirements, String checkInPayload, Boolean checkedIn, LocalDateTime checkedInAt, String checkedInBy, LocalDateTime createdAt) {
         this.id = id;
         this.userId = userId;
         this.userName = userName;
@@ -42,6 +46,10 @@ public class BookingResponseDTO {
         this.adminReason = adminReason;
         this.facultyApprovalPdf = facultyApprovalPdf;
         this.additionalRequirements = additionalRequirements;
+        this.checkInPayload = checkInPayload;
+        this.checkedIn = checkedIn;
+        this.checkedInAt = checkedInAt;
+        this.checkedInBy = checkedInBy;
         this.createdAt = createdAt;
     }
 
@@ -90,6 +98,18 @@ public class BookingResponseDTO {
 
     public String getAdditionalRequirements() { return additionalRequirements; }
     public void setAdditionalRequirements(String additionalRequirements) { this.additionalRequirements = additionalRequirements; }
+
+    public String getCheckInPayload() { return checkInPayload; }
+    public void setCheckInPayload(String checkInPayload) { this.checkInPayload = checkInPayload; }
+
+    public Boolean getCheckedIn() { return checkedIn; }
+    public void setCheckedIn(Boolean checkedIn) { this.checkedIn = checkedIn; }
+
+    public LocalDateTime getCheckedInAt() { return checkedInAt; }
+    public void setCheckedInAt(LocalDateTime checkedInAt) { this.checkedInAt = checkedInAt; }
+
+    public String getCheckedInBy() { return checkedInBy; }
+    public void setCheckedInBy(String checkedInBy) { this.checkedInBy = checkedInBy; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
