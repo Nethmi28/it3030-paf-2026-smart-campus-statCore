@@ -36,7 +36,7 @@ const AuthenticatedImage = ({ name, id }) => {
             }
         };
         fetchImg();
-        
+
         // Cleanup
         return () => {
             if (imgSrc) {
@@ -47,12 +47,12 @@ const AuthenticatedImage = ({ name, id }) => {
 
     if (loading) {
         return (
-            <div style={{ 
-                background: '#f1f5f9', 
-                borderRadius: '12px', 
-                height: '160px', 
-                display: 'flex', 
-                alignItems: 'center', 
+            <div style={{
+                background: '#f1f5f9',
+                borderRadius: '12px',
+                height: '160px',
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 border: '1px solid #e2e8f0'
             }}>
@@ -63,12 +63,12 @@ const AuthenticatedImage = ({ name, id }) => {
 
     if (error) {
         return (
-            <div style={{ 
-                background: '#fef2f2', 
-                borderRadius: '12px', 
-                height: '160px', 
-                display: 'flex', 
-                alignItems: 'center', 
+            <div style={{
+                background: '#fef2f2',
+                borderRadius: '12px',
+                height: '160px',
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 border: '1px solid #fee2e2'
             }}>
@@ -93,41 +93,41 @@ const AuthenticatedImage = ({ name, id }) => {
             border: '1px solid #e2e8f0',
             transition: 'transform 0.2s, box-shadow 0.2s'
         }}
-        onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
-        }}
-        onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-        }}>
+            onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+            }}>
             <a href={imgSrc} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
-                <img 
-                    src={imgSrc} 
-                    alt={name} 
-                    style={{ 
-                        width: '100%', 
-                        height: '160px', 
-                        objectFit: 'cover', 
+                <img
+                    src={imgSrc}
+                    alt={name}
+                    style={{
+                        width: '100%',
+                        height: '160px',
+                        objectFit: 'cover',
                         display: 'block',
                         backgroundColor: '#f1f5f9'
-                    }} 
+                    }}
                 />
             </a>
             <div style={{ padding: '10px 12px', textAlign: 'center', background: 'white', borderTop: '1px solid #e2e8f0' }}>
                 <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: '500', marginBottom: '4px' }}>
                     {displayName}
                 </div>
-                <a 
-                    href={imgSrc} 
+                <a
+                    href={imgSrc}
                     download={name}
-                    style={{ 
-                        fontSize: '0.65rem', 
-                        color: '#64748b', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        gap: '4px', 
+                    style={{
+                        fontSize: '0.65rem',
+                        color: '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
                         textDecoration: 'none',
                         cursor: 'pointer'
                     }}
@@ -205,7 +205,9 @@ export default function TicketDetailsCard({ ticket, onBack, onTicketUpdate }) {
     const fetchTechnicians = async () => {
         if (!isAdminOrManager) return;
         setTechnicians([
-            { id: 4, name: "Technician Saman", email: "tcsaman@fcu.lk" }
+            { id: 4, name: "Technician Saman", email: "tcsaman@fcu.lk" },
+            { id: 11, name: "Asini", email: "tc23707290@my.cu.lk" },
+            { id: 14, name: "Chamal", email: "tc23716896@my.cu.lk" }
         ]);
     };
 
@@ -379,48 +381,56 @@ export default function TicketDetailsCard({ ticket, onBack, onTicketUpdate }) {
                         onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#cbd5e1'; }}
                     >
                         <ArrowLeft size={18} />
-                        Back to Tickets
+
                     </button>
 
                     <div style={{ display: 'flex', gap: '10px' }}>
                         {canDelete && (
                             <button onClick={handleDeleteTicket} style={{ background: '#dc2626', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Trash2 size={14} /> 
+                                <Trash2 size={14} />
                                 {isStudent && ticket.status === 'OPEN' ? 'Cancel Ticket' : 'Delete Ticket'}
                             </button>
                         )}
                     </div>
                 </div>
 
-                <div style={{ marginTop: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                        <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Ticket #{ticket.id}</span>
+                <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '24px' }}>
+                    <div style={{ flex: 1, minWidth: '300px' }}>
+                        <div style={{ fontSize: '0.85rem', color: '#94a3b8', fontWeight: '500', marginBottom: '8px' }}>Ticket {ticket.id}</div>
+                        <h2 style={{ fontSize: '2.5rem', fontWeight: '800', color: 'white', margin: '0 0 12px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {ticket.category}
+                        </h2>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap', fontSize: '0.875rem', color: '#cbd5e1' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <User size={16} /> {ticket.reportedByName}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Calendar size={16} /> {new Date(ticket.createdAt).toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', paddingBottom: '4px' }}>
                         <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '6px',
-                            padding: '4px 12px', borderRadius: '20px',
+                            display: 'inline-flex', alignItems: 'center', gap: '8px',
+                            padding: '6px 18px', borderRadius: '24px',
                             background: statusConfig.bg, color: statusConfig.text,
-                            fontSize: '0.75rem', fontWeight: '600'
+                            fontSize: '0.8rem', fontWeight: '700',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            border: `1px solid ${statusConfig.border || 'transparent'}`,
+                            transition: 'all 0.2s'
                         }}>
                             {statusConfig.icon} {statusConfig.label}
                         </span>
                         <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '4px',
-                            padding: '4px 12px', borderRadius: '20px',
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            padding: '6px 18px', borderRadius: '24px',
                             background: priorityConfig.bg, color: priorityConfig.text,
-                            fontSize: '0.75rem', fontWeight: '600'
+                            fontSize: '0.8rem', fontWeight: '700',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            transition: 'all 0.2s'
                         }}>
-                            {priorityConfig.icon} {priorityConfig.label} Priority
-                        </span>
-                    </div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'white', marginBottom: '8px' }}>
-                        {ticket.category}
-                    </h2>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', fontSize: '0.8rem', color: '#94a3b8' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <User size={14} /> {ticket.reportedByName}
-                        </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Calendar size={14} /> {new Date(ticket.createdAt).toLocaleString()}
+                            <span style={{ fontSize: '1.1rem' }}>{priorityConfig.icon}</span> {priorityConfig.label} Priority
                         </span>
                     </div>
                 </div>
@@ -626,10 +636,10 @@ export default function TicketDetailsCard({ ticket, onBack, onTicketUpdate }) {
                                     <p>No attachments uploaded</p>
                                 </div>
                             ) : (
-                                <div style={{ 
-                                    display: 'grid', 
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', 
-                                    gap: '16px' 
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+                                    gap: '16px'
                                 }}>
                                     {ticket.attachmentNames.map((name, index) => {
                                         const id = ticket.attachmentIds[index];
@@ -638,27 +648,27 @@ export default function TicketDetailsCard({ ticket, onBack, onTicketUpdate }) {
                                             <AuthenticatedImage key={index} id={id} name={name} />
                                         ) : (
                                             <a href={`http://localhost:8089/api/tickets/attachments/${id}`} target="_blank" rel="noreferrer" key={index} style={{ textDecoration: 'none' }}>
-                                                <div style={{ 
-                                                    padding: '16px', 
-                                                    border: '1px solid #e2e8f0', 
-                                                    borderRadius: '12px', 
-                                                    display: 'flex', 
+                                                <div style={{
+                                                    padding: '16px',
+                                                    border: '1px solid #e2e8f0',
+                                                    borderRadius: '12px',
+                                                    display: 'flex',
                                                     flexDirection: 'column',
-                                                    alignItems: 'center', 
-                                                    gap: '10px', 
-                                                    cursor: 'pointer', 
-                                                    background: '#f8fafc', 
+                                                    alignItems: 'center',
+                                                    gap: '10px',
+                                                    cursor: 'pointer',
+                                                    background: '#f8fafc',
                                                     transition: 'all 0.2s',
                                                     textAlign: 'center'
                                                 }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.background = '#eff6ff';
-                                                    e.currentTarget.style.borderColor = '#3b82f6';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.background = '#f8fafc';
-                                                    e.currentTarget.style.borderColor = '#e2e8f0';
-                                                }}>
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = '#eff6ff';
+                                                        e.currentTarget.style.borderColor = '#3b82f6';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = '#f8fafc';
+                                                        e.currentTarget.style.borderColor = '#e2e8f0';
+                                                    }}>
                                                     <FileImage size={32} color="#3b82f6" />
                                                     <span style={{ fontSize: '0.75rem', color: '#3b82f6', wordBreak: 'break-word' }}>
                                                         {name.length > 30 ? name.substring(0, 30) + '...' : name}
