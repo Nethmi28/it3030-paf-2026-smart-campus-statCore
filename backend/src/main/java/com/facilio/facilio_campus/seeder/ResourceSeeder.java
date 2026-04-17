@@ -55,27 +55,27 @@ public class ResourceSeeder implements CommandLineRunner {
         resources.addAll(generateSeries("F", 1301, 1302, "LECTURE ROOM", "Faculty of Computing", 120, lecCompImg));
         resources.addAll(generateSeries("G", 1301, 1301, "LECTURE ROOM", "Faculty of Computing", 120, lecCompImg));
         resources.addAll(generateSeries("CompLab", 1, 2, "LAB", "Faculty of Computing", 60, labImg));
-        resources.addAll(generateSeries("CompEq", 1, 2, "EQUIPMENTS", "Faculty of Computing", 1, equipImg));
+        resources.add(new Resource("Computing Equipment Room", "EQUIPMENT_ROOM", "Faculty of Computing", "Computing Building, Floor 1", 1, "Available", "Central equipment store for Computing Faculty containing all necessary peripherals and AV gear.", equipImg, Arrays.asList("Projectors", "Whiteboards", "PCs", "Keyboards", "Mouses", "Speakers", "Mics")));
 
         // Business: BM
         resources.addAll(generateSeries("BM", 101, 105, "LECTURE ROOM", "Business School", 120, lecBusImg));
         resources.addAll(generateSeries("BMLab", 1, 2, "LAB", "Business School", 60, labImg));
-        resources.addAll(generateSeries("BMEq", 1, 2, "EQUIPMENTS", "Business School", 1, equipImg));
+        resources.add(new Resource("Business School Equipment Room", "EQUIPMENT_ROOM", "Business School", "Business School, Floor 1", 1, "Available", "Central equipment store for Business School including standard presentation tools.", equipImg, Arrays.asList("Projectors", "Whiteboards", "Wireless Mics", "Laser Pointers")));
 
         // Engineering: E
         resources.addAll(generateSeries("E", 101, 105, "LECTURE ROOM", "Faculty of Engineering", 240, lecEngImg));
         resources.addAll(generateSeries("ELab", 1, 2, "LAB", "Faculty of Engineering", 60, labImg));
-        resources.addAll(generateSeries("EEq", 1, 2, "EQUIPMENTS", "Faculty of Engineering", 1, equipImg));
+        resources.add(new Resource("Engineering Equipment Room", "EQUIPMENT_ROOM", "Faculty of Engineering", "Engineering Building, Floor 1", 1, "Available", "Central equipment store for Engineering Faculty with specialized hardware and testing tools.", equipImg, Arrays.asList("Projectors", "Whiteboards", "Drill Presses", "Oscilloscopes", "Multimeters", "Soldering Stations")));
 
         // Humanities: H
         resources.addAll(generateSeries("H", 101, 105, "LECTURE ROOM", "Faculty of Humanities & science", 120, lecHumImg));
         resources.addAll(generateSeries("HSLab", 1, 2, "LAB", "Faculty of Humanities & science", 60, labImg));
-        resources.addAll(generateSeries("HSEq", 1, 2, "EQUIPMENTS", "Faculty of Humanities & science", 1, equipImg));
+        resources.add(new Resource("Humanities & Science Equipment Room", "EQUIPMENT_ROOM", "Faculty of Humanities & science", "Humanities Building, Floor 1", 1, "Available", "Central equipment store for Humanities & Science students.", equipImg, Arrays.asList("Projectors", "Whiteboards", "Wireless Mics", "Laser Pointers")));
 
         // Architecture: ARC
         resources.addAll(generateSeries("ARC", 101, 105, "LECTURE ROOM", "School of architecture", 120, lecArchImg));
         resources.addAll(generateSeries("ARCLab", 1, 2, "LAB", "School of architecture", 60, labImg));
-        resources.addAll(generateSeries("ARCEq", 1, 2, "EQUIPMENTS", "School of architecture", 1, equipImg));
+        resources.add(new Resource("Architecture Equipment Room", "EQUIPMENT_ROOM", "School of architecture", "Architecture Building, Floor 1", 1, "Available", "Central equipment store for Architecture School with drafting and modeling tools.", equipImg, Arrays.asList("Projectors", "Whiteboards", "Drafting Boards", "Plotters", "Cutting Mats", "3D Printers")));
 
         // Sports equipments
         String sportsCategory = "Sports equipments";
