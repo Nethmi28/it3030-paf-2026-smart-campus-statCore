@@ -40,9 +40,13 @@ const ResourceCard = ({ resource }) => {
     >
       <div style={{ position: 'relative', height: '180px' }}>
         <img 
-          src={resource.imageUrl} 
+          src={resource.imageUrl || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800'} 
           alt={resource.name}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800';
+          }}
         />
         <div style={{
           position: 'absolute',
