@@ -124,7 +124,7 @@ export default function CreateTicketForm({ onSuccess }) {
                         value={formData.preferredContact} 
                         onChange={(e) => setFormData({...formData, preferredContact: e.target.value})}
                         style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                        placeholder="Email or Phone Number"
+                        placeholder="Email "
                     />
                 </div>
 
