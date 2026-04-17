@@ -16,7 +16,8 @@ export default function DashboardLayout() {
     if (currentUser.role === 'ROLE_ADMIN') {
       return [
         { id: 'admin', label: 'Admin Panel', icon: <LayoutDashboard size={20} />, exact: true },
-       { id: 'admin/registration-requests', label: 'New Registration Requests', icon: <UserPlus size={20} /> },
+        { id: 'admin/manage-resources', label: 'Manage Resources', icon: <Layers size={20} /> },
+        { id: 'admin/registration-requests', label: 'New Registration Requests', icon: <UserPlus size={20} /> },
         { id: 'notifications', label: 'System Logs', icon: <Bell size={20} /> },
       ];
     }
