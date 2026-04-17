@@ -43,6 +43,7 @@ export function StudentBookingsView() {
   });
   const [durationHours, setDurationHours] = useState(2);
   const [file, setFile] = useState(null);
+  const [cancelConfirm, setCancelConfirm] = useState({ isOpen: false, bookingId: null });
 
   useEffect(() => {
     if (location.state?.action === 'create') setActiveTab('create');
@@ -662,6 +663,16 @@ export function StudentBookingsView() {
           </div>
         )}
       </div>
+      <ConfirmationModal
+        isOpen={cancelConfirm.isOpen}
+        onClose={() => setCancelConfirm({ isOpen: false, bookingId: null })}
+        onConfirm={executeCancel}
+        type="danger"
+        title="Cancel Booking"
+        message="Are you sure you want to cancel this booking? This action cannot be undone."
+        confirmLabel="Cancel Booking"
+        cancelLabel="Keep Booking"
+      />
     </div>
   );
 }

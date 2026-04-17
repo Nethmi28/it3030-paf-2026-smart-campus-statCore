@@ -35,8 +35,8 @@ export default function Hero() {
             A unified platform for managing university facilities. Easily book rooms, access labs, and track maintenance incidents all in one place.
           </p>
           <div style={{ marginTop: '2.5rem' }}>
-            <Link to="/catalog" style={{ background: 'var(--accent)', color: 'var(--accent-text)', padding: '1rem 2rem', borderRadius: '50px', fontWeight: '600', display: 'inline-block', transition: 'all 0.3s' }}>
-              Book a Resource
+            <Link to="/dashboard/resources" style={{ background: 'var(--accent)', color: 'var(--accent-text)', padding: '1rem 2rem', borderRadius: '50px', fontWeight: '600', display: 'inline-block', transition: 'all 0.3s' }}>
+              Explore Facilities
             </Link>
           </div>
         </div>

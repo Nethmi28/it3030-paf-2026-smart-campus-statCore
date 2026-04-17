@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Upload, Plus, Trash2, Save, Info, Users, MapPin, Building2, Layers } from 'lucide-react';
+import ConfirmationModal from '../common/ConfirmationModal';
 
 const modalStyles = {
   overlay: {
@@ -172,6 +173,7 @@ export default function ResourceFormModal({ isOpen, onClose, onSave, resource, l
   const [newAmenity, setNewAmenity] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     if (resource) {
@@ -235,7 +237,12 @@ export default function ResourceFormModal({ isOpen, onClose, onSave, resource, l
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setShowConfirm(true);
+  };
+
+  const handleConfirmAction = () => {
     onSave(formData, imageFile);
+    setShowConfirm(false);
   };
 
   return (
@@ -448,6 +455,18 @@ export default function ResourceFormModal({ isOpen, onClose, onSave, resource, l
             </button>
           </div>
         </form>
+
+        <ConfirmationModal
+          isOpen={showConfirm}
+          onClose={() => setShowConfirm(false)}
+          onConfirm={handleConfirmAction}
+          type={resource ? 'success' : 'info'}
+          title={resource ? 'Confirm Update' : 'Confirm Creation'}
+          message={resource 
+            ? 'Are you sure you want to save the changes to this resource?' 
+            : 'Are you sure you want to create this new resource?'}
+          confirmLabel={resource ? 'Save Changes' : 'Create Resource'}
+        />
       </div>
     </div>
   );

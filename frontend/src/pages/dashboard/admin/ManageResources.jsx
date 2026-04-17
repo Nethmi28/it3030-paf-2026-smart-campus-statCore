@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Edit2, Trash2, MoreVertical, Layers, MapPin, Users, CheckCircle2, AlertTriangle, RefreshCcw } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import ResourceFormModal from '../../../components/admin/ResourceFormModal';
+import ConfirmationModal from '../../../components/common/ConfirmationModal';
 
 const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8089';
 
@@ -181,6 +182,7 @@ export default function ManageResources() {
   const [isSaving, setIsSaving] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: 'info', title: '', message: '', onConfirm: () => {} });
 
   const fetchResources = async () => {
     if (!user?.token) return;
@@ -244,23 +246,29 @@ export default function ManageResources() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this resource?')) return;
-    
-    try {
-      const resp = await fetch(`${API_BASE}/api/resources/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${user.token}`
-        }
-      });
+  const handleDelete = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      type: 'danger',
+      title: 'Delete Resource',
+      message: 'Are you sure you want to permanently delete this resource? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          const resp = await fetch(`${API_BASE}/api/resources/${id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${user.token}`
+            }
+          });
 
-      if (!resp.ok) throw new Error('Failed to delete resource');
-      
-      setResources(prev => prev.filter(r => r.id !== id));
-    } catch (err) {
-      alert(err.message);
-    }
+          if (!resp.ok) throw new Error('Failed to delete resource');
+          
+          setResources(prev => prev.filter(r => r.id !== id));
+        } catch (err) {
+          alert(err.message);
+        }
+      }
+    });
   };
 
   const filteredResources = resources.filter(res => 
@@ -426,6 +434,11 @@ export default function ManageResources() {
         onSave={handleSave}
         resource={selectedResource}
         loading={isSaving}
+      />
+
+      <ConfirmationModal 
+        {...confirmModal}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
 
       {previewImage && (
