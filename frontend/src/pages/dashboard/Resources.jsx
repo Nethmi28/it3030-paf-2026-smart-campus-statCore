@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { 
   Search, Filter, LayoutGrid, List, ChevronDown, 
-  Loader2, AlertCircle, ArrowLeft, GraduationCap 
+  Loader2, AlertCircle, ArrowLeft, GraduationCap,
+  BarChart3
 } from 'lucide-react';
 import ResourceCard from '../../components/resources/ResourceCard';
 import FacultyCard from '../../components/resources/FacultyCard';
+import ResourceAnalysis from '../../components/resources/ResourceAnalysis';
 import { FACULTIES, CAPACITIES } from '../../data/mockResources';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -19,7 +21,7 @@ export default function Resources() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFaculty, setSelectedFaculty] = useState('All Faculties');
   const [selectedCapacity, setSelectedCapacity] = useState('All Capacities');
-  const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'grid'
+  const [viewMode, setViewMode] = useState(user?.role === 'ROLE_MANAGER' ? 'analysis' : 'overview');
 
   // Pre-calculate faculty counts
   const facultyCounts = FACULTIES.reduce((acc, faculty) => {
@@ -103,18 +105,66 @@ export default function Resources() {
             </button>
           )}
           <h2 style={{ fontSize: '2.5rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '8px', letterSpacing: '-0.02em' }}>
-            {viewMode === 'overview' ? 'Campus Infrastructure' : selectedFaculty}
+            {viewMode === 'overview' ? 'Campus Infrastructure' : viewMode === 'analysis' ? 'Resource Analytics' : selectedFaculty}
           </h2>
           <div style={{ color: 'var(--text-muted)', fontSize: '1.1rem', fontWeight: '500' }}>
             {viewMode === 'overview' 
               ? 'Select a faculty starting point to discover specialized spaces'
-              : `Showing ${filteredResources.length} facilities in ${selectedFaculty}`
+              : viewMode === 'analysis'
+                ? 'High-level insights into facility utilization and health'
+                : `Showing ${filteredResources.length} facilities in ${selectedFaculty}`
             }
           </div>
         </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '16px' }}>
+          {user?.role === 'ROLE_MANAGER' && (
+            <div style={{ 
+              display: 'flex', 
+              background: 'var(--bg-alt)', 
+              padding: '4px', 
+              borderRadius: '14px',
+              border: '1px solid var(--border-color)'
+            }}>
+              {[
+                { id: 'analysis', label: 'Analysis', icon: <BarChart3 size={16} /> },
+                { id: 'overview', label: 'Faculties', icon: <GraduationCap size={16} /> },
+                { id: 'grid', label: 'Catalog', icon: <LayoutGrid size={16} /> }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setViewMode(tab.id);
+                    if (tab.id !== 'grid') setSelectedFaculty('All Faculties');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: viewMode === tab.id ? 'var(--bg-card)' : 'transparent',
+                    color: viewMode === tab.id ? 'var(--accent)' : 'var(--text-muted)',
+                    boxShadow: viewMode === tab.id ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {viewMode === 'overview' ? (
+      {viewMode === 'analysis' ? (
+        <ResourceAnalysis resources={resources} />
+      ) : viewMode === 'overview' ? (
         /* Overview Mode: Faculty Showcase */
         <div style={{ 
           display: 'grid', 
