@@ -17,6 +17,7 @@ export function StudentBookingsView() {
   const [loadingResources, setLoadingResources] = useState(false);
   const [myBookings, setMyBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [bookingError, setBookingError] = useState('');
 
   // Availability check
   const [conflicts, setConflicts] = useState([]);
@@ -45,19 +46,21 @@ export function StudentBookingsView() {
   useEffect(() => {
     if (activeTab === 'create' && resources.length === 0) {
       fetchResources();
-    } else if (activeTab === 'view') {
+    } else if (activeTab === 'view' && user?.token) {
       fetchMyBookings();
     }
-  }, [activeTab]);
+  }, [activeTab, user?.token]);
 
   const fetchMyBookings = async () => {
     if (!user?.token) return;
     setLoadingBookings(true);
+    setBookingError('');
     try {
       const data = await bookingService.getMyBookings(user.token);
       setMyBookings(data);
     } catch (err) {
       console.error('Failed to fetch bookings', err);
+      setBookingError(err.message || 'Unable to load your bookings right now.');
     } finally {
       setLoadingBookings(false);
     }
@@ -267,6 +270,11 @@ export function StudentBookingsView() {
           }}>
             {loadingBookings ? (
               <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+            ) : bookingError ? (
+              <div style={{ textAlign: 'center', padding: '48px' }}>
+                <p style={{ fontSize: '1.1rem', marginBottom: '8px', fontWeight: '600', color: 'var(--text-primary)' }}>Couldn&apos;t Load Bookings</p>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{bookingError}</p>
+              </div>
             ) : myBookings.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px' }}>
                 <p style={{ fontSize: '1.2rem', marginBottom: '8px', fontWeight: '600', color: 'var(--text-primary)' }}>No Bookings Found</p>
