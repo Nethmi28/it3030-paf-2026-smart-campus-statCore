@@ -6,7 +6,9 @@ import {
   UserPlus,
   Home,
   Eye,
-  EyeOff
+  EyeOff,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { getDashboardPathForRole } from '../../utils/campusAuth';
 
@@ -59,6 +61,29 @@ const ROLE_OPTIONS = [
   { value: 'ROLE_ADMIN', label: 'Admin', prefix: 'ad', exampleId: 'ad23707290', exampleEmail: 'ad23707290@my.cu.lk' }
 ];
 
+const LOGIN_SLIDES = [
+  {
+    image: '/images/lecture_hall.png',
+    title: 'Reserve learning spaces with less back-and-forth.',
+    description: 'Check availability, send requests, and keep classroom planning organized from one place.'
+  },
+  {
+    image: '/images/lab.png',
+    title: 'Keep labs and facilities easier to access.',
+    description: 'Students and staff can find the right space faster while managers keep approvals clear.'
+  },
+  {
+    image: '/images/library.png',
+    title: 'Stay connected to the campus services you use every day.',
+    description: 'From study spaces to shared resources, the portal brings requests and updates into one workflow.'
+  },
+  {
+    image: '/images/auditorium.png',
+    title: 'Coordinate venues, events, and support in one campus hub.',
+    description: 'Large spaces, special bookings, and ongoing operations stay visible to every role.'
+  }
+];
+
 export default function LoginPage() {
   const [form, setForm] = useState({ username: '', password: '' });
   const [requestForm, setRequestForm] = useState({
@@ -79,6 +104,7 @@ export default function LoginPage() {
   const [isRequestLoading, setIsRequestLoading] = useState(false);
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
   const apiBase = (import.meta.env.VITE_API_BASE?.replace(/\/$/, '')) || 'http://localhost:8089';
   const googleOAuthEnabled = import.meta.env.VITE_GOOGLE_OAUTH_ENABLED === 'true';
   const showDevSetup = import.meta.env.DEV || import.meta.env.VITE_SHOW_DEV_SETUP === 'true';
@@ -87,6 +113,14 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const selectedRoleConfig = ROLE_OPTIONS.find((option) => option.value === requestForm.requestedRole) || ROLE_OPTIONS[0];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveSlide((currentSlide) => (currentSlide + 1) % LOGIN_SLIDES.length);
+    }, 4500);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleCreateTestUser = async () => {
     try {
@@ -297,26 +331,112 @@ export default function LoginPage() {
     window.location.href = `${apiBase}/oauth2/authorization/google`;
   };
 
+  const goToPreviousSlide = () => {
+    setActiveSlide((currentSlide) => (currentSlide === 0 ? LOGIN_SLIDES.length - 1 : currentSlide - 1));
+  };
+
+  const goToNextSlide = () => {
+    setActiveSlide((currentSlide) => (currentSlide + 1) % LOGIN_SLIDES.length);
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: '#0b1120', padding: '20px' }}>
-      <div style={{ width: '100%', maxWidth: '1480px', minHeight: 'calc(100vh - 40px)', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', background: '#121a2b', borderRadius: '32px', overflow: 'hidden', border: '1px solid rgba(148, 163, 184, 0.12)', boxShadow: '0 30px 60px rgba(2, 6, 23, 0.45)' }}>
-        <div style={{ position: 'relative', minHeight: '440px', backgroundImage: "linear-gradient(180deg, rgba(15, 23, 42, 0.18) 0%, rgba(15, 23, 42, 0.56) 100%), url('/campus-hero.png')", backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '32px' }}>
-          <div>
+    <div style={{ minHeight: '100vh', background: '#0b1120', padding: '0px' }}>
+      <div style={{ width: '100%', maxWidth: '1480px', minHeight: 'calc(100vh - 40px)', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', background: '#121a2b', borderRadius: '0px', overflow: 'hidden', border: '1px solid rgba(148, 163, 184, 0.12)', boxShadow: '0 30px 60px rgba(2, 6, 23, 0.45)' }}>
+        <div style={{ position: 'relative', minHeight: '440px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '32px', overflow: 'hidden' }}>
+          {LOGIN_SLIDES.map((slide, slideIndex) => (
+            <div
+              key={slide.image}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: `linear-gradient(180deg, rgba(15, 23, 42, 0.16) 0%, rgba(15, 23, 42, 0.48) 58%, rgba(15, 23, 42, 0.68) 100%), url('${slide.image}')`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                opacity: slideIndex === activeSlide ? 1 : 0,
+                transition: 'opacity 0.7s ease'
+              }}
+            />
+          ))}
+
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(2, 6, 23, 0.12) 0%, rgba(2, 6, 23, 0.04) 42%, rgba(2, 6, 23, 0.2) 100%)' }} />
+
+          <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderRadius: '999px', background: 'rgba(15, 23, 42, 0.62)', border: '1px solid rgba(255, 255, 255, 0.16)', color: '#f8fafc', fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.08em' }}>
               <School size={18} />
               SMART CAMPUS ACCESS
             </div>
             <div style={{ marginTop: '32px', maxWidth: '480px' }}>
-              <h1 style={{ margin: 0, color: '#ffffff', fontSize: 'clamp(2.2rem, 4vw, 4rem)', lineHeight: 1.02, fontWeight: 800 }}>
-                One secure portal for campus operations.
+              <h1 style={{ margin: 0, color: '#ffffff', fontSize: 'clamp(2rem, 4vw, 3.5rem)', lineHeight: 1.02, fontWeight: 800 }}>
+                {LOGIN_SLIDES[activeSlide].title}
               </h1>
-              <p style={{ marginTop: '18px', marginBottom: 0, color: 'rgba(226, 232, 240, 0.9)', fontSize: '1rem', lineHeight: 1.7, maxWidth: '430px' }}>
-                Sign in with your approved campus account, or use Google after your request is approved.
-                Every role uses a campus email in the `prefix+number@my.cu.lk` format, and can optionally link a personal Google email.
+              <p style={{ marginTop: '18px', marginBottom: 0, color: 'rgba(226, 232, 240, 0.92)', fontSize: '1rem', lineHeight: 1.7, maxWidth: '430px' }}>
+                {LOGIN_SLIDES[activeSlide].description}
               </p>
             </div>
           </div>
 
+          <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {LOGIN_SLIDES.map((slide, slideIndex) => (
+                <button
+                  key={`${slide.image}-dot`}
+                  type="button"
+                  onClick={() => setActiveSlide(slideIndex)}
+                  aria-label={`Show login slide ${slideIndex + 1}`}
+                  style={{
+                    width: slideIndex === activeSlide ? '26px' : '10px',
+                    height: '10px',
+                    borderRadius: '999px',
+                    border: 'none',
+                    background: slideIndex === activeSlide ? '#f8fafc' : 'rgba(255, 255, 255, 0.42)',
+                    cursor: 'pointer',
+                    transition: 'width 0.25s ease, background-color 0.25s ease'
+                  }}
+                />
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={goToPreviousSlide}
+                aria-label="Previous login slide"
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '999px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(15, 23, 42, 0.56)',
+                  color: '#f8fafc',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                type="button"
+                onClick={goToNextSlide}
+                aria-label="Next login slide"
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '999px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(15, 23, 42, 0.56)',
+                  color: '#f8fafc',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
         </div>
 
         <div style={{ background: '#121a2b', padding: '28px clamp(24px, 4vw, 56px)', display: 'flex', flexDirection: 'column' }}>
