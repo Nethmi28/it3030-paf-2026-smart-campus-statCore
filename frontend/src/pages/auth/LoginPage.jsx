@@ -230,7 +230,7 @@ export default function LoginPage() {
     const password = form.password;
 
     if (!username || !password) {
-      setError('Enter both your campus username or approved email and password before signing in.');
+      setError('Enter your campus email or campus ID and password before signing in.');
       return;
     }
 
@@ -268,6 +268,11 @@ export default function LoginPage() {
 
     if (!payload.fullName || !payload.requestedRole || !payload.email || !payload.studentId || !payload.faculty) {
       setRequestError('Please fill in your full name, role, campus email, campus ID, and faculty or unit.');
+      return;
+    }
+
+    if (payload.googleEmail && !/^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(payload.googleEmail)) {
+      setRequestError('Personal email must be a Gmail address.');
       return;
     }
 
@@ -470,8 +475,8 @@ export default function LoginPage() {
               <form onSubmit={handleSubmit}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: '10px', color: '#e2e8f0', fontWeight: 600 }}>
-                    Username or Email
-                    <input name="username" value={form.username} onChange={handleInputChange} placeholder="e.g. mg.ghettiarchhi or cu1234567@fcu.lk" autoComplete="username" style={{ border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '14px', padding: '16px 18px', fontSize: '0.96rem', outline: 'none', background: '#121a2b', color: '#f8fafc', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)' }} />
+                    Campus Email or ID
+                    <input name="username" value={form.username} onChange={handleInputChange} placeholder="e.g. st23707290 or st23707290@my.cu.lk" autoComplete="username" style={{ border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '14px', padding: '16px 18px', fontSize: '0.96rem', outline: 'none', background: '#121a2b', color: '#f8fafc', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)' }} />
                   </label>
 
                   <label style={{ display: 'flex', flexDirection: 'column', gap: '10px', color: '#e2e8f0', fontWeight: 600 }}>

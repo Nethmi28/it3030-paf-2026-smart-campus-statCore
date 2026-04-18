@@ -1,58 +1,18 @@
-export const CAMPUS_ACCOUNTS = [
-  {
-    role: 'ROLE_STUDENT',
-    title: 'Student Portal',
-    subtitle: 'Students use the `st` prefix with their campus identifier.',
-    username: 'st.cu2354675',
-    password: 'ST@2026',
-    email: 'cu2354675@fcu.lk',
-    name: 'Student Center',
-    accent: '#2563eb',
-    surface: '#eff6ff'
-  },
-  {
-    role: 'ROLE_TECHNICIAN',
-    title: 'Technician Portal',
-    subtitle: 'Technicians use the `tc` prefix with their service name.',
-    username: 'tc.saman',
-    password: 'TC@2026',
-    email: 'tcsaman@fcu.lk',
-    name: 'Technician Saman',
-    accent: '#d97706',
-    surface: '#fff7ed'
-  },
-  {
-    role: 'ROLE_MANAGER',
-    title: 'Manager Portal',
-    subtitle: 'Managers use the `mg` prefix for campus operations access.',
-    username: 'mg.ghettiarchhi',
-    password: 'MG@2026',
-    email: 'mghettiarchhi@fcu.lk',
-    name: 'Manager Ghettiarchhi',
-    accent: '#059669',
-    surface: '#ecfdf5'
-  },
-  {
-    role: 'ROLE_ADMIN',
-    title: 'System Admin',
-    subtitle: 'Admins use the `ad` prefix for platform administration.',
-    username: 'ad.campus',
-    password: 'AD@2026',
-    email: 'test@campus.edu',
-    name: 'System Admin',
-    accent: '#7c3aed',
-    surface: '#f5f3ff'
-  }
-];
-
 export const AUTH_STORAGE_KEYS = {
   token: 'token',
   role: 'role',
   name: 'name'
 };
 
-const SUPPORTED_ROLES = CAMPUS_ACCOUNTS.map((account) => account.role);
+const SUPPORTED_ROLES = [
+  'ROLE_STUDENT',
+  'ROLE_TECHNICIAN',
+  'ROLE_MANAGER',
+  'ROLE_ADMIN'
+];
 const normalize = (value) => value.trim().toLowerCase();
+const CAMPUS_ID_PATTERN = /^(st|tc|mg|ad)\d+$/i;
+const CAMPUS_EMAIL_PATTERN = /^(st|tc|mg|ad)\d+@my\.cu\.lk$/i;
 
 export function getDashboardPathForRole(role) {
   switch (role) {
@@ -95,27 +55,56 @@ export function clearStoredCampusUser() {
   localStorage.removeItem(AUTH_STORAGE_KEYS.name);
 }
 
-export function resolveCampusCredentials(username, password) {
-  const account = CAMPUS_ACCOUNTS.find(
-    (entry) => entry.username === normalize(username)
-  );
+export function resolveCampusLoginIdentifier(identifier) {
+  const normalizedIdentifier = normalize(identifier);
 
-  if (!account) {
+  if (!normalizedIdentifier) {
     return {
       success: false,
-      error: 'Use one of the assigned campus usernames shown below.'
+      error: 'Enter your campus email or campus ID.'
     };
   }
 
-  if (password !== account.password) {
+  if (CAMPUS_EMAIL_PATTERN.test(normalizedIdentifier)) {
     return {
-      success: false,
-      error: 'Incorrect password for that campus account.'
+      success: true,
+      campusId: normalizedIdentifier.split('@')[0],
+      email: normalizedIdentifier
+    };
+  }
+
+  if (CAMPUS_ID_PATTERN.test(normalizedIdentifier)) {
+    return {
+      success: true,
+      campusId: normalizedIdentifier,
+      email: `${normalizedIdentifier}@my.cu.lk`
     };
   }
 
   return {
-    success: true,
-    account
+    success: false,
+    error: 'Use only your campus email like st23707290@my.cu.lk or campus ID like st23707290.'
   };
+}
+
+export function isCampusLoginIdentifier(identifier) {
+  const normalizedIdentifier = normalize(identifier);
+  return CAMPUS_ID_PATTERN.test(normalizedIdentifier) || CAMPUS_EMAIL_PATTERN.test(normalizedIdentifier);
+}
+
+export function getCampusLoginHint() {
+  return 'Use your campus email like st23707290@my.cu.lk or campus ID like st23707290.';
+}
+
+export function getNormalizedCampusIdentifier(identifier) {
+  const normalizedIdentifier = normalize(identifier);
+
+  if (!normalizedIdentifier) {
+    return {
+      success: false,
+      error: 'Enter your campus email or campus ID.'
+    };
+  }
+
+  return resolveCampusLoginIdentifier(normalizedIdentifier);
 }

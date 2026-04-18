@@ -26,6 +26,12 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    @Column(length = 30)
+    private String phoneNumber;
+
+    @Column(length = 255)
+    private String address;
+
     public User() {}
 
     public User(String name, String email, String password, Role role) {
@@ -57,4 +63,10 @@ public class User {
 
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
+
+    public String getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
 }

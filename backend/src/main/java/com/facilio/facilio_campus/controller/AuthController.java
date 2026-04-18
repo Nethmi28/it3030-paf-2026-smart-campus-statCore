@@ -5,7 +5,9 @@ import com.facilio.facilio_campus.dto.AdminUserDto;
 import com.facilio.facilio_campus.dto.AuthResponse;
 import com.facilio.facilio_campus.dto.LoginRequest;
 import com.facilio.facilio_campus.dto.OAuthExchangeRequest;
+import com.facilio.facilio_campus.dto.UpdateProfileRequest;
 import com.facilio.facilio_campus.dto.UpdateUserRoleDto;
+import com.facilio.facilio_campus.dto.UserProfileDto;
 import com.facilio.facilio_campus.model.AccountRequest;
 import com.facilio.facilio_campus.model.NotificationPriority;
 import com.facilio.facilio_campus.model.NotificationType;
@@ -115,8 +117,8 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Enter a valid email address.");
         }
 
-        if (!googleEmail.isBlank() && !googleEmail.contains("@")) {
-            return ResponseEntity.badRequest().body("Enter a valid Google sign-in email address.");
+        if (!googleEmail.isBlank() && !isValidGmailAddress(googleEmail)) {
+            return ResponseEntity.badRequest().body("Enter a valid Gmail address for Google sign-in.");
         }
 
         if (!isValidRequestedPassword(password)) {
@@ -173,6 +175,56 @@ public class AuthController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<?> getAccountRequests() {
         return ResponseEntity.ok(accountRequestRepository.findAllByOrderByCreatedAtDesc());
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentProfile(Authentication authentication) {
+        User user = userRepository.findByEmail(authentication.getName()).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User profile not found.");
+        }
+
+        return ResponseEntity.ok(mapToUserProfile(user));
+    }
+
+    @PatchMapping("/me")
+    public ResponseEntity<?> updateCurrentProfile(
+            Authentication authentication,
+            @RequestBody UpdateProfileRequest request
+    ) {
+        User user = userRepository.findByEmail(authentication.getName()).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User profile not found.");
+        }
+
+        String name = safeTrim(request.getName());
+        String phoneNumber = safeTrim(request.getPhoneNumber());
+        String address = safeTrim(request.getAddress());
+
+        if (name.isBlank()) {
+            return ResponseEntity.badRequest().body("Name is required.");
+        }
+
+        if (name.length() > 120) {
+            return ResponseEntity.badRequest().body("Name must be 120 characters or fewer.");
+        }
+
+        if (!phoneNumber.isBlank() && !phoneNumber.matches("^[0-9+()\\-\\s]{7,20}$")) {
+            return ResponseEntity.badRequest().body("Enter a valid phone number.");
+        }
+
+        if (address.length() > 255) {
+            return ResponseEntity.badRequest().body("Address must be 255 characters or fewer.");
+        }
+
+        user.setName(name);
+        user.setPhoneNumber(phoneNumber.isBlank() ? null : phoneNumber);
+        user.setAddress(address.isBlank() ? null : address);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(mapToUserProfile(user));
     }
 
     @PatchMapping("/account-requests/{id}/approve")
@@ -354,12 +406,27 @@ public class AuthController {
         return safeTrim(value).toLowerCase();
     }
 
+    private boolean isValidGmailAddress(String email) {
+        return email != null && email.matches("^[A-Za-z0-9._%+-]+@gmail\\.com$");
+    }
+
     private AuthResponse buildAuthResponse(CustomUserDetails userDetails) {
         String jwt = jwtUtil.generateToken(userDetails);
         return new AuthResponse(
                 jwt,
                 userDetails.getUser().getName(),
                 userDetails.getUser().getRole().name()
+        );
+    }
+
+    private UserProfileDto mapToUserProfile(User user) {
+        return new UserProfileDto(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.getPhoneNumber(),
+                user.getAddress()
         );
     }
 
