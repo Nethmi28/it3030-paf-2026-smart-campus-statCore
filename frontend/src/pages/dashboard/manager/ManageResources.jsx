@@ -94,18 +94,27 @@ const styles = {
     borderBottom: '1px solid var(--border-color)',
     color: 'var(--text-primary)'
   },
-  statusBadge: (status) => ({
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '4px 12px',
-    borderRadius: '99px',
-    fontSize: '0.75rem',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    background: status === 'Available' ? '#dcfce7' : status === 'Unavailable' || status === 'Out of Service' ? '#fee2e2' : '#fef3c7',
-    color: status === 'Available' ? '#166534' : status === 'Unavailable' || status === 'Out of Service' ? '#991b1b' : '#92400e'
-  }),
+  statusBadge: (status) => {
+    const isAvailable = status === 'Available';
+    const isMaintenance = status === 'Maintenance';
+    const isUnavailable = status === 'Unavailable' || status === 'Out of Service';
+
+    return {
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '6px 16px',
+      borderRadius: '8px',
+      fontSize: '0.75rem',
+      fontWeight: '800',
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em',
+      minWidth: '100px',
+      background: isAvailable ? '#dcfce7' : isMaintenance ? '#fef3c7' : '#fee2e2',
+      color: isAvailable ? '#166534' : isMaintenance ? '#92400e' : '#991b1b',
+      border: '1px solid transparent'
+    };
+  },
   actionButton: {
     padding: '8px',
     borderRadius: '8px',
@@ -177,6 +186,8 @@ export default function ManageResources() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({ status: 'All', type: 'All', faculty: 'All' });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -271,16 +282,44 @@ export default function ManageResources() {
     });
   };
 
-  const filteredResources = resources.filter(res => 
-    res.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    res.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    res.faculty.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const uniqueTypes = ['All', ...new Set(resources.map(r => r.type))];
+  const uniqueFaculties = ['All', ...new Set(resources.map(r => r.faculty))];
 
-  const getImageUrl = (url) => {
-    if (!url) return 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=400';
+  const filteredResources = resources.filter(res => {
+    const matchesSearch = 
+      res.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      res.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      res.faculty.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = filters.status === 'All' || 
+      (filters.status === 'Active' ? res.status === 'Available' : res.status === filters.status);
+    const matchesType = filters.type === 'All' || res.type === filters.type;
+    const matchesFaculty = filters.faculty === 'All' || res.faculty === filters.faculty;
+
+    return matchesSearch && matchesStatus && matchesType && matchesFaculty;
+  });
+
+  const getImageUrl = (url, type) => {
+    if (!url) {
+      if (type === 'TRANSPORTATION') {
+        return 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=400';
+      }
+      return 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=400';
+    }
     if (url.startsWith('http')) return url;
     return `${API_BASE}${url}`;
+  };
+
+  const filterSelectStyle = {
+    padding: '10px 14px',
+    borderRadius: '10px',
+    border: '1px solid var(--border-color)',
+    background: 'var(--bg-card)',
+    color: 'var(--text-primary)',
+    fontSize: '0.9rem',
+    width: '100%',
+    cursor: 'pointer',
+    outline: 'none'
   };
 
   return (
@@ -311,14 +350,115 @@ export default function ManageResources() {
               style={styles.searchInput}
             />
           </div>
-          <button 
-            style={{ ...styles.actionButton, gap: '8px', padding: '10px 16px' }}
-            onClick={fetchResources}
-          >
-            <RefreshCcw size={16} />
-            Refresh
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button 
+              style={{ 
+                ...styles.actionButton, 
+                gap: '8px', 
+                padding: '10px 20px',
+                background: showFilters ? 'var(--bg-alt)' : 'var(--bg-card)',
+                borderColor: showFilters ? 'var(--accent)' : 'var(--border-color)',
+                color: showFilters ? 'var(--accent)' : 'var(--text-primary)',
+                fontWeight: '600'
+              }}
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter size={18} />
+              Filters
+            </button>
+            <button 
+              style={{ ...styles.actionButton, gap: '8px', padding: '10px 16px' }}
+              onClick={fetchResources}
+            >
+              <RefreshCcw size={16} />
+              Refresh
+            </button>
+          </div>
         </div>
+
+        {showFilters && (
+          <div style={{ 
+            padding: '24px 32px', 
+            background: 'var(--bg-alt)', 
+            borderBottom: '1px solid var(--border-color)',
+            animation: 'slideDown 0.3s ease-out'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h4 style={{ fontWeight: '700', fontSize: '1rem' }}>Filter Resources</h4>
+              <button 
+                onClick={() => setShowFilters(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+              >
+                Close
+              </button>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status</label>
+                <select 
+                  value={filters.status}
+                  onChange={(e) => setFilters({...filters, status: e.target.value})}
+                  style={filterSelectStyle}
+                >
+                  <option value="All">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Maintenance">Maintenance</option>
+                  <option value="Unavailable">Unavailable</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Type</label>
+                <select 
+                  value={filters.type}
+                  onChange={(e) => setFilters({...filters, type: e.target.value})}
+                  style={filterSelectStyle}
+                >
+                  {uniqueTypes.map(type => (
+                    <option key={type} value={type}>{type === 'All' ? 'All Types' : type.replace('_', ' ')}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Faculty</label>
+                <select 
+                  value={filters.faculty}
+                  onChange={(e) => setFilters({...filters, faculty: e.target.value})}
+                  style={filterSelectStyle}
+                >
+                  {uniqueFaculties.map(faculty => (
+                    <option key={faculty} value={faculty}>{faculty === 'All' ? 'All Faculties' : faculty}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button 
+                onClick={() => setFilters({ status: 'All', type: 'All', faculty: 'All' })}
+                style={{ 
+                  padding: '10px 20px', borderRadius: '10px', background: 'transparent', 
+                  border: '1px solid var(--border-color)', color: 'var(--text-primary)',
+                  fontWeight: '600', cursor: 'pointer'
+                }}
+              >
+                Reset
+              </button>
+              <button 
+                onClick={() => setShowFilters(false)}
+                style={{ 
+                  padding: '10px 32px', borderRadius: '10px', background: 'var(--accent)', 
+                  border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
 
         <div style={{ overflowX: 'auto' }}>
           <table style={styles.table}>
@@ -358,10 +498,10 @@ export default function ManageResources() {
                           }}
                           onMouseEnter={() => setHoveredId(res.id)}
                           onMouseLeave={() => setHoveredId(null)}
-                          onClick={() => setPreviewImage(getImageUrl(res.imageUrl))}
+                          onClick={() => setPreviewImage(getImageUrl(res.imageUrl, res.type))}
                         >
                           <img 
-                            src={getImageUrl(res.imageUrl)} 
+                            src={getImageUrl(res.imageUrl, res.type)} 
                             alt={res.name}
                             style={{
                               ...styles.thumbnailImg,
@@ -369,7 +509,7 @@ export default function ManageResources() {
                             }}
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=400';
+                              e.target.src = getImageUrl(null, res.type);
                             }}
                           />
                         </div>
@@ -398,8 +538,7 @@ export default function ManageResources() {
                     </td>
                     <td style={styles.td}>
                       <span style={styles.statusBadge(res.status)}>
-                        {res.status === 'Available' ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
-                        {res.status === 'Available' ? 'Active' : res.status}
+                        {res.status === 'Available' ? 'AVAILABLE' : res.status.toUpperCase()}
                       </span>
                     </td>
                     <td style={styles.td}>

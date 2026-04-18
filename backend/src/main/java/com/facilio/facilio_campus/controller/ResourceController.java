@@ -44,7 +44,7 @@ public class ResourceController {
     }
 
     @PostMapping(consumes = {"multipart/form-data"})
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<ResourceDTO> createResource(
             @RequestPart("resource") ResourceDTO resourceDTO,
             @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
@@ -52,7 +52,7 @@ public class ResourceController {
     }
 
     @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<ResourceDTO> updateResource(
             @PathVariable Long id,
             @RequestPart("resource") ResourceDTO resourceDTO,
@@ -85,7 +85,7 @@ public class ResourceController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<Void> deleteResource(@PathVariable Long id) {
         resourceService.deleteResource(id);
         return ResponseEntity.noContent().build();

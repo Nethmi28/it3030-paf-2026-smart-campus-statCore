@@ -13,13 +13,15 @@ import TicketUserView from './pages/dashboard/TicketUserView';
 import Notifications from './pages/dashboard/Notifications';
 import AdminDashboard from './pages/dashboard/admin/AdminDashboard';
 import AdminRegistrationRequests from './pages/dashboard/admin/AdminRegistrationRequests';
-import ManageResources from './pages/dashboard/admin/ManageResources';
+import ManageResources from './pages/dashboard/manager/ManageResources';
 import ManagerDashboard from './pages/dashboard/manager/ManagerDashboard';
 import TechnicianDashboard from './pages/dashboard/technician/TechnicianDashboard';
 import StudentDashboard from './pages/dashboard/student/StudentDashboard';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import './index.css';
+
+import PublicLayout from './layouts/PublicLayout';
 
 function App() {
   return (
@@ -32,6 +34,12 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
 
+              {/* Public Resource Catalog - Accessible to everyone */}
+              <Route element={<PublicLayout />}>
+                <Route path="/resources" element={<Resources />} />
+                <Route path="/resources/:id" element={<ResourceDetails />} />
+              </Route>
+
               {/* Dashboard Routes nested and protected */}
               <Route path="/dashboard" element={
                 <ProtectedRoute>
@@ -39,6 +47,7 @@ function App() {
                 </ProtectedRoute>
               }>
                 <Route index element={<DashboardOverview />} />
+                {/* Dashboard still has resources, but we can either keep them or redirect */}
                 <Route path="resources" element={<Resources />} />
                 <Route path="resources/:id" element={<ResourceDetails />} />
                 <Route path="bookings" element={<Bookings />} />
@@ -63,9 +72,9 @@ function App() {
                 }
               />
                 <Route
-                  path="admin/manage-resources"
+                  path="manager/manage-resources"
                   element={
-                    <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+                    <ProtectedRoute allowedRoles={['ROLE_MANAGER']}>
                       <ManageResources />
                     </ProtectedRoute>
                   }

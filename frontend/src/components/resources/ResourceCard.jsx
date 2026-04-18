@@ -1,8 +1,22 @@
 import { MapPin, Users, Wifi, Tv, Monitor, Laptop, ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+
+const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8089';
 
 const ResourceCard = ({ resource }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const getImageUrl = (url) => {
+    if (!url) {
+      if (resource.type === 'TRANSPORTATION') {
+        return 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=800';
+      }
+      return 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800';
+    }
+    if (url.startsWith('http')) return url;
+    return `${API_BASE}${url}`;
+  };
 
   const getStatusColor = (status) => {
     return status === 'Available' ? '#10b981' : '#ef4444';
@@ -29,12 +43,17 @@ const ResourceCard = ({ resource }) => {
         flexDirection: 'column',
         position: 'relative'
       }}
-      onClick={() => navigate(`/dashboard/resources/${resource.id}`)}
+    onClick={() => {
+      const path = location.pathname.startsWith('/dashboard') 
+        ? `/dashboard/resources/${resource.id}` 
+        : `/resources/${resource.id}`;
+      navigate(path);
+    }}
     >
       {/* Image Section */}
       <div style={{ position: 'relative', height: '220px', overflow: 'hidden' }}>
         <img 
-          src={resource.imageUrl || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800'} 
+          src={getImageUrl(resource.imageUrl)} 
           alt={resource.name}
           style={{ 
             width: '100%', 
@@ -46,34 +65,52 @@ const ResourceCard = ({ resource }) => {
           onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
           onError={(e) => {
             e.target.onerror = null;
-            e.target.src = 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800';
+            e.target.src = getImageUrl(null);
           }}
         />
         
-        {/* Status Badge - Glassmorphic */}
-        <div className="glass-card" style={{
+        {/* Status Badge - Premium Refined */}
+        <div style={{
           position: 'absolute',
           top: '16px',
           right: '16px',
-          padding: '6px 14px',
+          padding: '8px 16px',
           borderRadius: '99px',
-          fontSize: '0.75rem',
-          fontWeight: '700',
-          color: getStatusColor(resource.status),
+          background: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          gap: '8px',
+          boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+          zIndex: 5
         }}>
           <span style={{ 
-            width: '8px', 
-            height: '8px', 
+            width: '10px', 
+            height: '10px', 
             borderRadius: '50%', 
             background: getStatusColor(resource.status),
-            boxShadow: `0 0 10px ${getStatusColor(resource.status)}`
+            boxShadow: `0 0 12px ${getStatusColor(resource.status)}`,
+            animation: resource.status === 'Available' ? 'statusPulse 2s infinite' : 'none'
           }}></span>
-          {resource.status}
+          <span style={{ 
+            fontSize: '0.7rem', 
+            fontWeight: '800', 
+            color: 'white', 
+            textTransform: 'uppercase', 
+            letterSpacing: '0.06em' 
+          }}>
+            {resource.status}
+          </span>
         </div>
+
+        <style>{`
+          @keyframes statusPulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+          }
+        `}</style>
 
         {/* Type Badge */}
         <div style={{

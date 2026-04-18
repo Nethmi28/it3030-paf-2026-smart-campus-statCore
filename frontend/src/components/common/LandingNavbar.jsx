@@ -5,7 +5,7 @@ import ThemeToggle from './ThemeToggle';
 export default function LandingNavbar() {
   const navItems = [
     { label: 'Home', href: '#home', active: true },
-    { label: 'Resources', href: '#facilities' },
+    { label: 'Resources', to: '/resources' },
     { label: 'Reservations', to: '/login' },
     { label: 'About Us', href: '#about-us' },
     { label: 'Contact Us', href: '#contact-us' },
