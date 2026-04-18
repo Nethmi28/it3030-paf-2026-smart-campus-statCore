@@ -26,7 +26,10 @@ export function StudentBookingsView() {
   const [myBookings, setMyBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [bookingError, setBookingError] = useState('');
+<<<<<<< HEAD
   const [qrBooking, setQrBooking] = useState(null);
+=======
+>>>>>>> 2b9eaa12b2e4209a0d02ff722070e0718e530a30
 
   // Availability check
   const [conflicts, setConflicts] = useState([]);

@@ -15,18 +15,24 @@ export default function ManagerBookingsView() {
   const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [loadError, setLoadError] = useState('');
+<<<<<<< HEAD
   const [checkInCode, setCheckInCode] = useState('');
   const [verifyingCheckIn, setVerifyingCheckIn] = useState(false);
+=======
+>>>>>>> 2b9eaa12b2e4209a0d02ff722070e0718e530a30
 
   useEffect(() => {
     if (user?.token) {
       fetchBookings();
     }
   }, [user?.token]);
+<<<<<<< HEAD
 
   useEffect(() => {
     setCheckInCode('');
   }, [selectedBooking?.id]);
+=======
+>>>>>>> 2b9eaa12b2e4209a0d02ff722070e0718e530a30
 
   const fetchBookings = async () => {
     if (!user?.token) return;
