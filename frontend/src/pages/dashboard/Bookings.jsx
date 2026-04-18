@@ -11,31 +11,9 @@ import {
   formatBookingRange,
   formatBookingTime,
   isOutsideBookingWindow,
-  toMinutes,
 } from '../../utils/bookingTime';
 
 const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8089';
-
-const formatDateInputValue = (date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-};
-
-const formatTimeInputValue = (date) => {
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-
-  return `${hours}:${minutes}`;
-};
-
-const addMonthsToDate = (date, months) => {
-  const nextDate = new Date(date);
-  nextDate.setMonth(nextDate.getMonth() + months);
-  return nextDate;
-};
 
 export function StudentBookingsView() {
   const location = useLocation();
@@ -48,7 +26,9 @@ export function StudentBookingsView() {
   const [myBookings, setMyBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [bookingError, setBookingError] = useState('');
+=======
   const [qrBooking, setQrBooking] = useState(null);
+
 
   // Availability check
   const [conflicts, setConflicts] = useState([]);

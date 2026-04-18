@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.time.Duration;
 
 @Service
 public class TicketService {
@@ -454,6 +455,67 @@ public class TicketService {
         
         commentRepository.delete(comment);
     }
+
+    // ==================== SLA METHODS ====================
+
+public String getSlaStatus(Ticket ticket) {
+    LocalDateTime now = LocalDateTime.now();
+    long hoursOpen = Duration.between(ticket.getCreatedAt(), now).toHours();
+    
+    // If ticket is resolved or closed
+    if (ticket.getStatus() == TicketStatus.RESOLVED || 
+        ticket.getStatus() == TicketStatus.CLOSED) {
+        if (ticket.getResolvedAt() != null) {
+            long hoursToResolve = Duration.between(ticket.getCreatedAt(), ticket.getResolvedAt()).toHours();
+            if (hoursToResolve <= 24) return "✅ Within SLA";
+            if (hoursToResolve <= 48) return "⚠️ Approaching SLA";
+            return "🔴 SLA Breached";
+        }
+    }
+    
+    // For open tickets
+    if (hoursOpen <= 24) return "🟢 On Track";
+    if (hoursOpen <= 48) return "🟡 Urgent - Action Required";
+    return "🔴 Overdue - SLA Breached";
+}
+
+public String getSlaColor(Ticket ticket) {
+    LocalDateTime now = LocalDateTime.now();
+    long hoursOpen = Duration.between(ticket.getCreatedAt(), now).toHours();
+    
+    if (ticket.getStatus() == TicketStatus.RESOLVED || 
+        ticket.getStatus() == TicketStatus.CLOSED) {
+        if (ticket.getResolvedAt() != null) {
+            long hoursToResolve = Duration.between(ticket.getCreatedAt(), ticket.getResolvedAt()).toHours();
+            if (hoursToResolve <= 24) return "#22c55e";
+            if (hoursToResolve <= 48) return "#eab308";
+            return "#ef4444";
+        }
+    }
+    
+    if (hoursOpen <= 24) return "#22c55e";
+    if (hoursOpen <= 48) return "#eab308";
+    return "#ef4444";
+}
+
+public int getSlaPercentage(Ticket ticket) {
+    long hoursOpen = Duration.between(ticket.getCreatedAt(), LocalDateTime.now()).toHours();
+    // Cap at 72 hours (3 days)
+    int percentage = (int) Math.min((hoursOpen * 100) / 72, 100);
+    return Math.max(percentage, 5); // Minimum 5%
+}
+
+public String getFormattedTimeOpen(Ticket ticket) {
+    LocalDateTime now = LocalDateTime.now();
+    long hours = Duration.between(ticket.getCreatedAt(), now).toHours();
+    long days = hours / 24;
+    hours = hours % 24;
+    
+    if (days > 0) {
+        return days + "d " + hours + "h";
+    }
+    return hours + " hours";
+}
 
     // ==================== ATTACHMENTS ====================
 

@@ -73,6 +73,7 @@ export default function ManagerBookingsView() {
     bookingDate: '',
   });
 
+
   useEffect(() => {
     if (user?.token) {
       fetchBookings();
@@ -585,6 +586,7 @@ export default function ManagerBookingsView() {
         message: err.message || 'Failed to update the booking status.',
       });
     }
+    return new Date(timestamp).toLocaleString();
   };
 
   const handleVerifyCheckIn = async () => {
