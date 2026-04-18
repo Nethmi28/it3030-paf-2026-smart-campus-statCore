@@ -185,11 +185,23 @@ public class BookingService {
         BookingStatus previousStatus = booking.getStatus();
 
         booking.setStatus(updateDTO.getStatus());
+        
+        // Generate Check-In Token if approved
+        if (updateDTO.getStatus() == BookingStatus.APPROVED && (booking.getCheckInToken() == null || booking.getCheckInToken().isBlank())) {
+            booking.setCheckInToken(generateCheckInToken());
+        }
+
         if (updateDTO.getAdminReason() != null) {
             booking.setAdminReason(updateDTO.getAdminReason());
         }
         
         Booking updatedBooking = bookingRepository.save(booking);
+        
+        // Record audit log
+        recordAuditEvent(updatedBooking, BookingAuditAction.STATUS_UPDATED, "system", 
+            "Status changed from " + previousStatus + " to " + updateDTO.getStatus() + 
+            (updateDTO.getAdminReason() != null ? ". Reason: " + updateDTO.getAdminReason() : ""));
+
         notificationService.notifyUser(
                 updatedBooking.getUser(),
                 "Booking " + humanizeBookingStatus(updatedBooking.getStatus()),
@@ -237,6 +249,7 @@ public class BookingService {
         );
         return mapToDTO(cancelledBooking);
     }
+
 
     @Transactional
     public BookingResponseDTO verifyCheckIn(Long id, BookingCheckInRequestDTO request, String userEmail) {

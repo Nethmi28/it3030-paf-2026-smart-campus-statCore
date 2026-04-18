@@ -15,6 +15,32 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8089';
 
+const formatDateInputValue = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  return d.toISOString().split('T')[0];
+};
+
+const addMonthsToDate = (date, months) => {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
+};
+
+const formatTimeInputValue = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
+const toMinutes = (timeString) => {
+  if (!timeString || typeof timeString !== 'string' || !timeString.includes(':')) return null;
+  const [h, m] = timeString.split(':');
+  return parseInt(h) * 60 + parseInt(m);
+};
+
 export function StudentBookingsView() {
   const location = useLocation();
   const { user } = useAuth();
@@ -26,7 +52,7 @@ export function StudentBookingsView() {
   const [myBookings, setMyBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [bookingError, setBookingError] = useState('');
-=======
+
   const [qrBooking, setQrBooking] = useState(null);
 
 
@@ -99,7 +125,7 @@ export function StudentBookingsView() {
         title: 'Booking Cancelled',
         message: 'The booking was cancelled successfully.',
       });
-    } catch(err) {
+    } catch (err) {
       showToast({
         variant: 'error',
         title: 'Cancellation Failed',
@@ -546,7 +572,7 @@ export function StudentBookingsView() {
                               </button>
                             )}
                             {!bk.checkedIn && (bk.status === 'PENDING' || bk.status === 'APPROVED') && (
-                              <button 
+                              <button
                                 onClick={() => handleCancelBooking(bk.id)}
                                 style={{ background: '#fee2e2', color: '#ef4444', border: '1px solid #f87171', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
                               >
@@ -691,16 +717,16 @@ export function StudentBookingsView() {
 
                 {conflicts.length > 0 && (
                   <div style={{ marginTop: '12px' }}>
-                     <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                       <Clock size={14} /> ALREADY BOOKED SLOTS
-                     </div>
-                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {conflicts.map((slot, i) => (
-                           <span key={i} style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', border: '1px solid #fecaca' }}>
-                             {formatBookingRange(slot.startTime, slot.endTime)}
-                           </span>
-                        ))}
-                     </div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Clock size={14} /> ALREADY BOOKED SLOTS
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {conflicts.map((slot, i) => (
+                        <span key={i} style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', border: '1px solid #fecaca' }}>
+                          {formatBookingRange(slot.startTime, slot.endTime)}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
 

@@ -65,7 +65,8 @@ export default function Resources() {
       const data = await response.json();
       setResources(data);
     } catch (err) {
-      setError(err.message);
+      console.error('Failed to fetch resources:', err);
+      setError(err.message || 'Unable to connect to the facility server.');
     } finally {
       setLoading(false);
     }
@@ -386,7 +387,43 @@ export default function Resources() {
             )}
           </div>
 
-          {loading ? (
+          {error ? (
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              padding: '80px 40px', 
+              gap: '20px',
+              background: 'var(--bg-card)',
+              borderRadius: '24px',
+              border: '1px solid var(--border-color)',
+              textAlign: 'center'
+            }}>
+              <div style={{ padding: '20px', borderRadius: '50%', background: '#fee2e2', color: '#ef4444' }}>
+                <AlertCircle size={40} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>Connection Failure</h3>
+                <p style={{ color: 'var(--text-muted)', maxWidth: '400px', margin: '0 auto' }}>{error}</p>
+              </div>
+              <button 
+                onClick={fetchResources}
+                style={{ 
+                  padding: '12px 28px', 
+                  borderRadius: '12px', 
+                  background: '#3b82f6', 
+                  color: 'white', 
+                  border: 'none', 
+                  fontWeight: '700', 
+                  cursor: 'pointer',
+                  boxShadow: '0 10px 20px rgba(59, 130, 246, 0.2)'
+                }}
+              >
+                Try Reconnecting
+              </button>
+            </div>
+          ) : loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px', gap: '16px' }}>
               <Loader2 size={40} className="animate-spin" style={{ color: 'var(--accent)' }} />
               <p style={{ color: 'var(--text-muted)', fontWeight: '500' }}>Loading resources...</p>

@@ -3,7 +3,7 @@ import { bookingService } from '../../services/bookingService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { ArrowLeft, ArrowUpRight, CalendarRange, CheckCircle, Clock3, Download, FileText, Filter, Search, XCircle } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, CalendarRange, CheckCircle, Clock, Download, FileText, Filter, Search, XCircle } from 'lucide-react';
 import { formatBookingRange } from '../../utils/bookingTime';
 
 const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8089';
@@ -133,7 +133,7 @@ export default function ManagerBookingsView() {
       title: 'Pending',
       value: bookings.filter((booking) => booking.status === 'PENDING').length,
       description: 'Awaiting review',
-      icon: <Clock3 size={20} />,
+      icon: <Clock size={20} />,
       color: '#d97706',
       background: 'rgba(217, 119, 6, 0.16)',
     },
@@ -586,7 +586,6 @@ export default function ManagerBookingsView() {
         message: err.message || 'Failed to update the booking status.',
       });
     }
-    return new Date(timestamp).toLocaleString();
   };
 
   const handleVerifyCheckIn = async () => {

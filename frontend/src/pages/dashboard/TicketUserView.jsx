@@ -32,6 +32,8 @@ export default function TicketUserView() {
   const [viewMode, setViewMode] = useState('my');
   const [filters, setFilters] = useState({ status: '', priority: '', category: '' });
   const [showFilters, setShowFilters] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const isAdminOrManager = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_MANAGER';
   const isTechnician = user?.role === 'ROLE_TECHNICIAN';
@@ -68,30 +70,45 @@ export default function TicketUserView() {
   };
 
   const fetchMyTickets = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const data = await ticketService.getMyTickets();
       setMyTickets(data || []);
     } catch (e) {
       console.error("Failed to fetch user tickets", e);
+      setError(e.message || "Failed to load your tickets.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchAssignedTickets = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const data = await ticketService.getAssignedToMe();
       setAssignedTickets(data || []);
     } catch (e) {
       console.error("Failed to fetch assigned tickets", e);
+      setError(e.message || "Failed to load assigned tickets.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchAllTickets = async () => {
+    setLoading(true);
+    setError(null);
     try {
       // Fetch ALL tickets without filters (client-side filtering will handle it)
       const data = await ticketService.getAllTickets('', '', '');
       setAllTickets(data || []);
     } catch (e) {
       console.error("Failed to fetch all tickets", e);
+      setError(e.message || "Failed to load application tickets.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -108,6 +125,8 @@ export default function TicketUserView() {
     }
   }, [activeTab, viewMode]);
 
+  const hasActiveFilters = filters.status || filters.priority || filters.category;
+
   const getDisplayTickets = () => {
     let tickets;
     if (viewMode === 'my') tickets = myTickets;
@@ -122,7 +141,6 @@ export default function TicketUserView() {
   };
 
   const displayTickets = getDisplayTickets();
-  const hasActiveFilters = filters.status || filters.priority || filters.category;
   const viewModeLabel = isStudent
     ? 'My Tickets'
     : isTechnician
@@ -881,7 +899,32 @@ export default function TicketUserView() {
         minHeight: '400px'
       }}>
 
-        {activeTab === 'details' && selectedTicket ? (
+        {error ? (
+          <div style={{ padding: '80px 20px', textAlign: 'center' }}>
+            <div style={{ color: '#ef4444', marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+              <AlertCircle size={48} />
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>Unable to retrieve tickets</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>{error}</p>
+            <button 
+              onClick={() => {
+                if (viewMode === 'my') fetchMyTickets();
+                else if (viewMode === 'assigned') fetchAssignedTickets();
+                else fetchAllTickets();
+              }}
+              style={{ padding: '10px 24px', borderRadius: '12px', background: '#3b82f6', color: 'white', border: 'none', fontWeight: '700', cursor: 'pointer' }}
+            >
+              Retry Connection
+            </button>
+          </div>
+        ) : loading ? (
+          <div style={{ padding: '80px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+              <div className="animate-spin" style={{ width: '32px', height: '32px', border: '3px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%' }} />
+            </div>
+            <p style={{ fontWeight: '600' }}>Synchronizing tickets...</p>
+          </div>
+        ) : activeTab === 'details' && selectedTicket ? (
           <TicketDetailsCard
             ticket={selectedTicket}
             onBack={() => {
