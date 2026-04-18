@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { ticketService } from '../../services/ticketService';
 import { Camera, AlertCircle, X } from 'lucide-react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Image from '@tiptap/extension-image';
 
 export default function CreateTicketForm({ onSuccess }) {
     const [formData, setFormData] = useState({
@@ -14,6 +17,34 @@ export default function CreateTicketForm({ onSuccess }) {
     const [files, setFiles] = useState([]);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
+
+    // Initialize TipTap editor
+const editor = useEditor({
+    extensions: [
+        StarterKit,
+        Image.configure({
+            inline: true,
+            allowBase64: true,
+        }),
+    ],
+    content: formData.description,
+    onUpdate: ({ editor }) => {
+        setFormData({...formData, description: editor.getHTML()});
+    },
+    editorProps: {
+        attributes: {
+            class: 'tiptap-editor',
+            style: `
+                min-height: 150px; 
+                padding: 12px; 
+                border: 1px solid #e2e8f0; 
+                border-radius: 8px; 
+                background: white;
+                outline: none;
+            `
+        }
+    }
+});
 
     const handleFileChange = (e) => {
         const selectedFiles = Array.from(e.target.files);
@@ -41,6 +72,9 @@ export default function CreateTicketForm({ onSuccess }) {
                 category: 'PLUMBING', priority: 'MEDIUM', 
                 locationText: '', description: '', preferredContact: ''
             });
+            if (editor) {
+                editor.commands.setContent('');
+            }
             setFiles([]);
             if (onSuccess) onSuccess();
         } catch (err) {
@@ -49,6 +83,27 @@ export default function CreateTicketForm({ onSuccess }) {
             setLoading(false);
         }
     };
+
+    // Toolbar button styles
+    const toolbarButton = (isActive, onClick, children) => (
+        <button
+            type="button"
+            onClick={onClick}
+            style={{
+                padding: '6px 10px',
+                background: isActive ? '#3b82f6' : '#f1f5f9',
+                color: isActive ? 'white' : '#475569',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '500',
+                fontSize: '0.75rem',
+                transition: 'all 0.2s'
+            }}
+        >
+            {children}
+        </button>
+    );
 
     return (
         <div style={{ background: 'var(--bg-card, #fff)', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
@@ -106,14 +161,21 @@ export default function CreateTicketForm({ onSuccess }) {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Description</label>
-                    <textarea 
-                        required
-                        value={formData.description} 
-                        onChange={(e) => setFormData({...formData, description: e.target.value})}
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', minHeight: '100px' }}
-                        placeholder="Please describe the issue in detail..."
-                    />
+                    <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Description (Rich Text)</label>
+                    
+                    {/* TipTap Toolbar */}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                        {toolbarButton(editor?.isActive('bold'), () => editor?.chain().focus().toggleBold().run(), 'Bold')}
+                        {toolbarButton(editor?.isActive('italic'), () => editor?.chain().focus().toggleItalic().run(), 'Italic')}
+                        {toolbarButton(editor?.isActive('strike'), () => editor?.chain().focus().toggleStrike().run(), 'Strike')}
+                        {toolbarButton(editor?.isActive('bulletList'), () => editor?.chain().focus().toggleBulletList().run(), 'Bullet List')}
+                        {toolbarButton(editor?.isActive('orderedList'), () => editor?.chain().focus().toggleOrderedList().run(), 'Numbered List')}
+                        {toolbarButton(editor?.isActive('heading', { level: 2 }), () => editor?.chain().focus().toggleHeading({ level: 2 }).run(), 'H2')}
+                        {toolbarButton(editor?.isActive('heading', { level: 3 }), () => editor?.chain().focus().toggleHeading({ level: 3 }).run(), 'H3')}
+                    </div>
+                    
+                    {/* TipTap Editor */}
+                    <EditorContent editor={editor} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
