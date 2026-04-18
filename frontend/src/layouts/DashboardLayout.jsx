@@ -224,17 +224,33 @@ export default function DashboardLayout() {
               )}
             </NavLink>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <NavLink
+              to="/dashboard/profile"
+              style={({ isActive }) => ({
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '8px 10px',
+                borderRadius: '16px',
+                textDecoration: 'none',
+                color: 'inherit',
+                background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
+                border: isActive ? '1px solid var(--sidebar-active-border)' : '1px solid transparent',
+                boxShadow: isActive ? '0 10px 24px rgba(37, 99, 235, 0.14)' : 'none',
+                transition: 'background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease'
+              })}
+              title="Profile Details"
+            >
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#3b82f6', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '600', fontSize: '1rem' }}>
                 {currentUser.name.charAt(0)}
               </div>
               <div>
                 <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>{currentUser.name}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: '#dcfce7', color: '#22c55e', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', marginTop: '2px' }}>
+                <div style={{ fontSize: '0.75rem', background: '#dcfce7', color: '#22c55e', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', marginTop: '2px' }}>
                   {currentUser.role.replace('ROLE_', '')}
                 </div>
               </div>
-            </div>
+            </NavLink>
           </div>
         </div>
 

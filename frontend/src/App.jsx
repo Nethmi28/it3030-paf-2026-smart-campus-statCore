@@ -11,6 +11,7 @@ import ResourceDetails from './pages/dashboard/ResourceDetails';
 import Bookings from './pages/dashboard/Bookings';
 import TicketUserView from './pages/dashboard/TicketUserView';
 import Notifications from './pages/dashboard/Notifications';
+import ProfileDetails from './pages/dashboard/ProfileDetails';
 import AdminDashboard from './pages/dashboard/admin/AdminDashboard';
 import AdminRegistrationRequests from './pages/dashboard/admin/AdminRegistrationRequests';
 import ManageResources from './pages/dashboard/admin/ManageResources';
@@ -44,6 +45,7 @@ function App() {
                 <Route path="bookings" element={<Bookings />} />
                 <Route path="tickets" element={<TicketUserView />} />
                 <Route path="notifications" element={<Notifications />} />
+                <Route path="profile" element={<ProfileDetails />} />
 
                 {/* New Role-Based placeholders mapped correctly */}
                 <Route

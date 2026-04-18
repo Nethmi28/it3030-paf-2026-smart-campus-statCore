@@ -146,11 +146,27 @@ export const AuthProvider = ({ children }) => {
     navigate('/', { replace: true });
   };
 
+  const updateCurrentUserProfile = (profilePayload) => {
+    setUser((currentUser) => {
+      if (!currentUser) {
+        return currentUser;
+      }
+
+      const nextUser = {
+        ...currentUser,
+        name: profilePayload?.name || currentUser.name
+      };
+
+      persistCampusUser(nextUser);
+      return nextUser;
+    });
+  };
+
   const completeOAuthLogin = ({ token, role, name }) => {
     return applyAuthenticatedUser({ token, role, name });
   };
 
-  const value = { user, login, logout, loading, completeOAuthLogin, exchangeOAuthCode };
+  const value = { user, login, logout, loading, completeOAuthLogin, exchangeOAuthCode, updateCurrentUserProfile };
 
   return (
     <AuthContext.Provider value={value}>
