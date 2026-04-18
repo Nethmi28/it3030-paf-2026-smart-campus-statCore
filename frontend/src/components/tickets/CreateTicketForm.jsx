@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { ticketService } from '../../services/ticketService';
 import { Camera, AlertCircle, X } from 'lucide-react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Image from '@tiptap/extension-image';
 
 export default function CreateTicketForm({ onSuccess }) {
     const [formData, setFormData] = useState({
@@ -10,10 +13,39 @@ export default function CreateTicketForm({ onSuccess }) {
         description: '',
         preferredContact: ''
     });
-    
+
     const [files, setFiles] = useState([]);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
+
+    // Initialize TipTap editor
+    const editor = useEditor({
+        extensions: [
+            StarterKit,
+            Image.configure({
+                inline: true,
+                allowBase64: true,
+            }),
+        ],
+        content: formData.description,
+        onUpdate: ({ editor }) => {
+            setFormData({ ...formData, description: editor.getHTML() });
+        },
+        editorProps: {
+            attributes: {
+                class: 'tiptap-editor',
+                style: `
+                min-height: 150px; 
+                padding: 12px; 
+                border: 1px solid var(--border-color); 
+                border-radius: 8px; 
+                background: var(--bg-alt);
+                color: var(--text-primary);
+                outline: none;
+            `
+            }
+        }
+    });
 
     const handleFileChange = (e) => {
         const selectedFiles = Array.from(e.target.files);
@@ -21,7 +53,7 @@ export default function CreateTicketForm({ onSuccess }) {
             setError("You can only upload a maximum of 3 images.");
             return;
         }
-        
+
         setError(null);
         setFiles(prev => [...prev, ...selectedFiles].slice(0, 3));
     };
@@ -32,15 +64,33 @@ export default function CreateTicketForm({ onSuccess }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Validations
+        const isDescriptionEmpty = !editor || editor.getText().trim().length === 0;
+        const locationRegex = /^[a-zA-Z0-9\s]*$/;
+
+        if (isDescriptionEmpty) {
+            setError("Description is mandatory. Please provide a brief explanation of the issue.");
+            return;
+        }
+
+        if (!locationRegex.test(formData.locationText)) {
+            setError("Location (Room / Area) cannot contain special characters. Only alphanumeric characters and spaces are allowed.");
+            return;
+        }
+
         setLoading(true);
         setError(null);
-        
+
         try {
             await ticketService.createTicket(formData, files);
             setFormData({
-                category: 'PLUMBING', priority: 'MEDIUM', 
+                category: 'PLUMBING', priority: 'MEDIUM',
                 locationText: '', description: '', preferredContact: ''
             });
+            if (editor) {
+                editor.commands.setContent('');
+            }
             setFiles([]);
             if (onSuccess) onSuccess();
         } catch (err) {
@@ -50,10 +100,31 @@ export default function CreateTicketForm({ onSuccess }) {
         }
     };
 
+    // Toolbar button styles
+    const toolbarButton = (isActive, onClick, children) => (
+        <button
+            type="button"
+            onClick={onClick}
+            style={{
+                padding: '6px 10px',
+                background: isActive ? '#3b82f6' : 'var(--bg-alt)',
+                color: isActive ? 'white' : 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '500',
+                fontSize: '0.75rem',
+                transition: 'all 0.2s'
+            }}
+        >
+            {children}
+        </button>
+    );
+
     return (
-        <div style={{ background: 'var(--bg-card, #fff)', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '16px' }}>Report an Issue</h3>
-            
+        <div style={{ background: 'var(--bg-card)', padding: '24px', borderRadius: '12px', boxShadow: 'var(--shadow)', border: '1px solid var(--border-color)' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '16px', color: 'var(--text-primary)' }}>Report an Issue</h3>
+
             {error && (
                 <div style={{ background: '#fee2e2', color: '#ef4444', padding: '12px', borderRadius: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <AlertCircle size={18} />
@@ -64,11 +135,11 @@ export default function CreateTicketForm({ onSuccess }) {
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Category</label>
-                        <select 
-                            value={formData.category} 
-                            onChange={(e) => setFormData({...formData, category: e.target.value})}
-                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                        <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Category</label>
+                        <select
+                            value={formData.category}
+                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-alt)', color: 'var(--text-primary)' }}
                         >
                             <option value="PLUMBING">Plumbing</option>
                             <option value="ELECTRICAL">Electrical</option>
@@ -79,11 +150,11 @@ export default function CreateTicketForm({ onSuccess }) {
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Priority</label>
-                        <select 
-                            value={formData.priority} 
-                            onChange={(e) => setFormData({...formData, priority: e.target.value})}
-                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                        <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Priority</label>
+                        <select
+                            value={formData.priority}
+                            onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                            style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-alt)', color: 'var(--text-primary)' }}
                         >
                             <option value="LOW">Low</option>
                             <option value="MEDIUM">Medium</option>
@@ -94,59 +165,72 @@ export default function CreateTicketForm({ onSuccess }) {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Location (Room / Area)</label>
-                    <input 
+                    <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Location (Room / Area)</label>
+                    <input
                         required
-                        type="text" 
-                        value={formData.locationText} 
-                        onChange={(e) => setFormData({...formData, locationText: e.target.value})}
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                        type="text"
+                        value={formData.locationText}
+                        onChange={(e) => {
+                            const value = e.target.value;
+                            // Allow only alphanumeric characters and spaces
+                            const filteredValue = value.replace(/[^a-zA-Z0-9\s]/g, '');
+                            setFormData({ ...formData, locationText: filteredValue });
+                        }}
+                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-alt)', color: 'var(--text-primary)' }}
                         placeholder="e.g. Block A, Room 102"
                     />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Description</label>
-                    <textarea 
-                        required
-                        value={formData.description} 
-                        onChange={(e) => setFormData({...formData, description: e.target.value})}
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', minHeight: '100px' }}
-                        placeholder="Please describe the issue in detail..."
-                    />
+                    <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Description (Rich Text)</label>
+
+                    {/* TipTap Toolbar */}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                        {toolbarButton(editor?.isActive('bold'), () => editor?.chain().focus().toggleBold().run(), 'Bold')}
+                        {toolbarButton(editor?.isActive('italic'), () => editor?.chain().focus().toggleItalic().run(), 'Italic')}
+                        {toolbarButton(editor?.isActive('strike'), () => editor?.chain().focus().toggleStrike().run(), 'Strike')}
+                        {toolbarButton(editor?.isActive('bulletList'), () => editor?.chain().focus().toggleBulletList().run(), 'Bullet List')}
+                        {toolbarButton(editor?.isActive('orderedList'), () => editor?.chain().focus().toggleOrderedList().run(), 'Numbered List')}
+                        {toolbarButton(editor?.isActive('heading', { level: 2 }), () => editor?.chain().focus().toggleHeading({ level: 2 }).run(), 'H2')}
+                        {toolbarButton(editor?.isActive('heading', { level: 3 }), () => editor?.chain().focus().toggleHeading({ level: 3 }).run(), 'H3')}
+                    </div>
+
+                    {/* TipTap Editor */}
+                    <EditorContent editor={editor} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Preferred Contact</label>
-                    <input 
+                    <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Preferred Contact</label>
+                    <input
                         required
-                        type="email" 
-                        value={formData.preferredContact} 
-                        onChange={(e) => setFormData({...formData, preferredContact: e.target.value})}
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                        placeholder="Email or Phone Number"
+                        type="email"
+                        value={formData.preferredContact}
+                        onChange={(e) => setFormData({ ...formData, preferredContact: e.target.value })}
+                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-alt)', color: 'var(--text-primary)' }}
+                        placeholder="Email "
                     />
                 </div>
 
                 {/* File Upload Section */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Attachments (Max 3 Images)</label>
-                    
+                    <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Attachments (Max 3 Images)</label>
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <label style={{ 
-                            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', 
-                            background: '#f1f5f9', color: '#475569', borderRadius: '8px', 
-                            cursor: files.length >= 3 ? 'not-allowed' : 'pointer', fontWeight: '500' 
+                        <label style={{
+                            display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px',
+                            background: 'var(--bg-alt)', color: 'var(--text-primary)', borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            cursor: files.length >= 3 ? 'not-allowed' : 'pointer', fontWeight: '500'
                         }}>
                             <Camera size={20} />
                             <span>Upload Images</span>
-                            <input 
-                                type="file" 
-                                accept="image/*" 
-                                multiple 
-                                disabled={files.length >= 3} 
-                                onChange={handleFileChange} 
-                                style={{ display: 'none' }} 
+                            <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                disabled={files.length >= 3}
+                                onChange={handleFileChange}
+                                style={{ display: 'none' }}
                             />
                         </label>
                         <span style={{ fontSize: '0.875rem', color: '#64748b' }}>{files.length} / 3 Selected</span>
@@ -155,9 +239,9 @@ export default function CreateTicketForm({ onSuccess }) {
                     {files.length > 0 && (
                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
                             {files.map((file, idx) => (
-                                <div key={idx} style={{ 
-                                    display: 'flex', alignItems: 'center', gap: '8px', background: '#e2e8f0', 
-                                    padding: '4px 8px', borderRadius: '4px', fontSize: '0.875rem' 
+                                <div key={idx} style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px', background: '#e2e8f0',
+                                    padding: '4px 8px', borderRadius: '4px', fontSize: '0.875rem'
                                 }}>
                                     <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {file.name}
@@ -170,13 +254,13 @@ export default function CreateTicketForm({ onSuccess }) {
                 </div>
 
                 <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                    <button 
-                        type="submit" 
+                    <button
+                        type="submit"
                         disabled={loading}
-                        style={{ 
-                            background: '#3b82f6', color: 'white', padding: '10px 24px', 
-                            borderRadius: '8px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', 
-                            fontWeight: '600', opacity: loading ? 0.7 : 1 
+                        style={{
+                            background: '#3b82f6', color: 'white', padding: '10px 24px',
+                            borderRadius: '8px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                            fontWeight: '600', opacity: loading ? 0.7 : 1
                         }}
                     >
                         {loading ? 'Submitting...' : 'Submit Ticket'}

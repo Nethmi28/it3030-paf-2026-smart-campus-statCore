@@ -9,6 +9,9 @@ import com.facilio.facilio_campus.model.BookingAuditAction;
 import com.facilio.facilio_campus.model.BookingAuditLog;
 import com.facilio.facilio_campus.model.Booking;
 import com.facilio.facilio_campus.model.BookingStatus;
+import com.facilio.facilio_campus.model.NotificationPriority;
+import com.facilio.facilio_campus.model.NotificationType;
+import com.facilio.facilio_campus.model.Role;
 import com.facilio.facilio_campus.model.Resource;
 import com.facilio.facilio_campus.model.User;
 import com.facilio.facilio_campus.repository.BookingAuditLogRepository;
@@ -50,6 +53,9 @@ public class BookingService {
 
     @Autowired
     private ResourceRepository resourceRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     private final String UPLOAD_DIR = "uploads/bookings/";
 
@@ -99,11 +105,16 @@ public class BookingService {
         }
 
         Booking savedBooking = bookingRepository.save(booking);
-        recordAuditEvent(
-                savedBooking,
-                BookingAuditAction.CREATED,
-                userEmail,
-                "Booking created for " + savedBooking.getBookingDate() + " " + savedBooking.getStartTime() + "-" + savedBooking.getEndTime()
+        notificationService.notifyRoles(
+                List.of(Role.ROLE_MANAGER, Role.ROLE_ADMIN),
+                "New booking request submitted",
+                user.getName() + " requested " + resource.getName()
+                        + " for " + request.getBookingDate()
+                        + " from " + request.getStartTime()
+                        + " to " + request.getEndTime() + ".",
+                NotificationType.BOOKING,
+                NotificationPriority.MEDIUM,
+                "Booking Management"
         );
         return mapToDTO(savedBooking);
     }
@@ -177,30 +188,22 @@ public class BookingService {
         if (updateDTO.getAdminReason() != null) {
             booking.setAdminReason(updateDTO.getAdminReason());
         }
-
-        if (updateDTO.getStatus() == BookingStatus.APPROVED) {
-            booking.setCheckInToken(generateCheckInToken());
-            booking.setCheckedIn(false);
-            booking.setCheckedInAt(null);
-            booking.setCheckedInBy(null);
-        } else if (updateDTO.getStatus() == BookingStatus.REJECTED) {
-            booking.setCheckInToken(null);
-            booking.setCheckedIn(false);
-            booking.setCheckedInAt(null);
-            booking.setCheckedInBy(null);
-        }
-
-        Booking savedBooking = bookingRepository.save(booking);
-        recordAuditEvent(
-                savedBooking,
-                BookingAuditAction.STATUS_UPDATED,
-                "system-status-update",
-                "Status changed from " + previousStatus + " to " + savedBooking.getStatus() +
-                        (savedBooking.getAdminReason() != null && !savedBooking.getAdminReason().isBlank()
-                                ? " | note: " + savedBooking.getAdminReason()
-                                : "")
+        
+        Booking updatedBooking = bookingRepository.save(booking);
+        notificationService.notifyUser(
+                updatedBooking.getUser(),
+                "Booking " + humanizeBookingStatus(updatedBooking.getStatus()),
+                "Your booking for " + updatedBooking.getResource().getName()
+                        + " on " + updatedBooking.getBookingDate()
+                        + " is now " + humanizeBookingStatus(updatedBooking.getStatus()).toLowerCase()
+                        + formatAdminReason(updatedBooking.getAdminReason()),
+                NotificationType.BOOKING,
+                updatedBooking.getStatus() == BookingStatus.REJECTED
+                        ? NotificationPriority.HIGH
+                        : NotificationPriority.MEDIUM,
+                "Booking Management"
         );
-        return mapToDTO(savedBooking);
+        return mapToDTO(updatedBooking);
     }
 
     @Transactional
@@ -221,28 +224,31 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
-        booking.setCheckInToken(null);
-        booking.setCheckedIn(false);
-        booking.setCheckedInAt(null);
-        booking.setCheckedInBy(null);
-        Booking savedBooking = bookingRepository.save(booking);
-        recordAuditEvent(
-                savedBooking,
-                BookingAuditAction.CANCELLED,
-                userEmail,
-                "Booking cancelled by the requester"
+        Booking cancelledBooking = bookingRepository.save(booking);
+        notificationService.notifyRoles(
+                List.of(Role.ROLE_MANAGER, Role.ROLE_ADMIN),
+                "Booking cancelled",
+                booking.getUser().getName() + " cancelled the booking for "
+                        + booking.getResource().getName()
+                        + " on " + booking.getBookingDate() + ".",
+                NotificationType.BOOKING,
+                NotificationPriority.LOW,
+                "Booking Management"
         );
-        return mapToDTO(savedBooking);
+        return mapToDTO(cancelledBooking);
     }
 
     @Transactional
-    public BookingResponseDTO verifyCheckIn(Long id, BookingCheckInRequestDTO request, String verifierEmail) {
+    public BookingResponseDTO verifyCheckIn(Long id, BookingCheckInRequestDTO request, String userEmail) {
+        if (request == null || request.getQrPayload() == null || request.getQrPayload().isBlank()) {
+            throw new IllegalArgumentException("QR check-in payload is required");
+        }
+
+        userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
-
-        if (request == null || request.getQrPayload() == null || request.getQrPayload().trim().isEmpty()) {
-            throw new IllegalArgumentException("QR code data is required");
-        }
 
         if (booking.getStatus() != BookingStatus.APPROVED) {
             throw new IllegalArgumentException("Only approved bookings can be checked in");
@@ -252,36 +258,69 @@ public class BookingService {
             throw new IllegalArgumentException("This booking has already been checked in");
         }
 
-        if (!LocalDate.now().equals(booking.getBookingDate())) {
-            throw new IllegalArgumentException("Check-in is only available on the booking date");
+        if (booking.getCheckInToken() == null || booking.getCheckInToken().isBlank()) {
+            throw new IllegalArgumentException("This booking does not have an active QR check-in code");
         }
 
-        LocalTime now = LocalTime.now();
-        LocalTime checkInOpenTime = booking.getStartTime().minusMinutes(CHECK_IN_OPEN_BUFFER_MINUTES);
-        if (now.isBefore(checkInOpenTime) || !now.isBefore(booking.getEndTime())) {
-            throw new IllegalArgumentException("Check-in is only available from 30 minutes before the booking starts until it ends");
+        ParsedCheckInPayload parsedPayload = parseCheckInPayload(request.getQrPayload());
+        if (!booking.getId().equals(parsedPayload.bookingId())) {
+            throw new IllegalArgumentException("QR code does not match the selected booking");
         }
 
-        ParsedCheckInPayload payload = parseCheckInPayload(request.getQrPayload());
-        if (!booking.getId().equals(payload.bookingId())) {
-            throw new IllegalArgumentException("This QR code does not match the selected booking");
+        if (!booking.getCheckInToken().equals(parsedPayload.token())) {
+            throw new IllegalArgumentException("QR code does not match the active booking token");
         }
 
-        if (booking.getCheckInToken() == null || !booking.getCheckInToken().equals(payload.token())) {
-            throw new IllegalArgumentException("This QR code is invalid or expired");
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime bookingStart = LocalDateTime.of(booking.getBookingDate(), booking.getStartTime());
+        LocalDateTime bookingEnd = LocalDateTime.of(booking.getBookingDate(), booking.getEndTime());
+        LocalDateTime checkInOpensAt = bookingStart.minusMinutes(CHECK_IN_OPEN_BUFFER_MINUTES);
+
+        if (now.isBefore(checkInOpensAt)) {
+            throw new IllegalArgumentException(
+                    "Check-in opens only " + CHECK_IN_OPEN_BUFFER_MINUTES + " minutes before the booking start time"
+            );
+        }
+
+        if (now.isAfter(bookingEnd)) {
+            throw new IllegalArgumentException("Check-in is no longer available because this booking has already ended");
         }
 
         booking.setCheckedIn(true);
-        booking.setCheckedInAt(LocalDateTime.now());
-        booking.setCheckedInBy(verifierEmail);
-        Booking savedBooking = bookingRepository.save(booking);
+        booking.setCheckedInAt(now);
+        booking.setCheckedInBy(userEmail);
+        Booking checkedInBooking = bookingRepository.save(booking);
+
         recordAuditEvent(
-                savedBooking,
+                checkedInBooking,
                 BookingAuditAction.CHECKED_IN,
-                verifierEmail,
-                "QR check-in verified successfully"
+                userEmail,
+                "QR check-in verified for booking #" + checkedInBooking.getId()
         );
-        return mapToDTO(savedBooking);
+
+        notificationService.notifyUser(
+                checkedInBooking.getUser(),
+                "Booking check-in verified",
+                "Your booking for " + checkedInBooking.getResource().getName()
+                        + " on " + checkedInBooking.getBookingDate() + " has been checked in successfully.",
+                NotificationType.BOOKING,
+                NotificationPriority.LOW,
+                "Booking Management"
+        );
+
+        return mapToDTO(checkedInBooking);
+    }
+
+    private String humanizeBookingStatus(BookingStatus status) {
+        return status.name().replace('_', ' ');
+    }
+
+    private String formatAdminReason(String adminReason) {
+        if (adminReason == null || adminReason.isBlank()) {
+            return ".";
+        }
+
+        return ". Reason: " + adminReason;
     }
 
     private BookingResponseDTO mapToDTO(Booking booking) {

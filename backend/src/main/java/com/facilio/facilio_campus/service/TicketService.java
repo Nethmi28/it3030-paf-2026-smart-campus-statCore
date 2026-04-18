@@ -12,10 +12,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.time.Duration;
 
 @Service
 public class TicketService {
@@ -24,6 +26,7 @@ public class TicketService {
     private final TicketAttachmentRepository attachmentRepository;
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
+    private final NotificationService notificationService;
 
     private final String UPLOAD_DIR = "uploads/tickets/";
     
@@ -36,11 +39,13 @@ public class TicketService {
     public TicketService(TicketRepository ticketRepository, 
                          TicketAttachmentRepository attachmentRepository,
                          UserRepository userRepository,
-                         CommentRepository commentRepository) {
+                         CommentRepository commentRepository,
+                         NotificationService notificationService) {
         this.ticketRepository = ticketRepository;
         this.attachmentRepository = attachmentRepository;
         this.userRepository = userRepository;
         this.commentRepository = commentRepository;
+        this.notificationService = notificationService;
     }
 
     // ==================== TICKET CRUD ====================
@@ -82,6 +87,17 @@ public class TicketService {
         if (files != null && files.length > 0) {
             saveAttachments(files, ticket);
         }
+
+        notificationService.notifyRoles(
+                List.of(Role.ROLE_MANAGER, Role.ROLE_ADMIN),
+                "New incident ticket created",
+                user.getName() + " reported a " + dto.getPriority().name()
+                        + " priority ticket for "
+                        + describeTicketTarget(ticket) + ".",
+                NotificationType.TICKET,
+                resolvePriority(dto.getPriority()),
+                "Ticketing"
+        );
 
         return mapToDTO(ticket);
     }
@@ -186,6 +202,23 @@ public class TicketService {
         }
         
         ticket = ticketRepository.save(ticket);
+        notificationService.notifyUser(
+                technician,
+                "Ticket assigned to you",
+                "Ticket #" + ticket.getId() + " has been assigned to you for "
+                        + describeTicketTarget(ticket) + ".",
+                NotificationType.TICKET,
+                resolvePriority(ticket.getPriority()),
+                "Ticket Assignment"
+        );
+        notificationService.notifyUser(
+                ticket.getReportedBy(),
+                "Technician assigned to your ticket",
+                "Your ticket #" + ticket.getId() + " is now assigned to " + technician.getName() + ".",
+                NotificationType.TICKET,
+                NotificationPriority.MEDIUM,
+                "Ticket Assignment"
+        );
         
         return mapToDTO(ticket);
     }
@@ -234,6 +267,27 @@ public class TicketService {
         }
         
         ticket = ticketRepository.save(ticket);
+        notificationService.notifyUser(
+                ticket.getReportedBy(),
+                "Ticket status updated",
+                "Your ticket #" + ticket.getId() + " is now "
+                        + humanizeTicketStatus(ticket.getStatus()).toLowerCase() + ".",
+                NotificationType.TICKET,
+                resolvePriority(ticket.getPriority()),
+                "Ticketing"
+        );
+
+        if (ticket.getAssignedTo() != null && !ticket.getAssignedTo().getEmail().equalsIgnoreCase(userEmail)) {
+            notificationService.notifyUser(
+                    ticket.getAssignedTo(),
+                    "Assigned ticket updated",
+                    "Ticket #" + ticket.getId() + " changed to "
+                            + humanizeTicketStatus(ticket.getStatus()).toLowerCase() + ".",
+                    NotificationType.TICKET,
+                    resolvePriority(ticket.getPriority()),
+                    "Ticketing"
+            );
+        }
         
         return mapToDTO(ticket);
     }
@@ -280,6 +334,14 @@ public class TicketService {
         ticket.setStatus(TicketStatus.REJECTED);
         ticket.setRejectedReason(request.getRejectedReason());
         ticket = ticketRepository.save(ticket);
+        notificationService.notifyUser(
+                ticket.getReportedBy(),
+                "Ticket rejected",
+                "Your ticket #" + ticket.getId() + " was rejected. Reason: " + request.getRejectedReason(),
+                NotificationType.TICKET,
+                NotificationPriority.HIGH,
+                "Ticketing"
+        );
         
         return mapToDTO(ticket);
     }
@@ -303,6 +365,27 @@ public class TicketService {
         comment.setAuthor(user);
         comment.setContent(dto.getContent());
         comment = commentRepository.save(comment);
+
+        List<User> commentRecipients = new ArrayList<>();
+        if (!ticket.getReportedBy().getId().equals(user.getId())) {
+            commentRecipients.add(ticket.getReportedBy());
+        }
+        if (ticket.getAssignedTo() != null && !ticket.getAssignedTo().getId().equals(user.getId())) {
+            commentRecipients.add(ticket.getAssignedTo());
+        }
+        commentRecipients.addAll(
+                userRepository.findByRoleIn(List.of(Role.ROLE_MANAGER, Role.ROLE_ADMIN)).stream()
+                        .filter(recipient -> !recipient.getId().equals(user.getId()))
+                        .toList()
+        );
+        notificationService.notifyUsers(
+                commentRecipients,
+                "New ticket comment",
+                user.getName() + " added a comment on ticket #" + ticket.getId() + ".",
+                NotificationType.COMMENT,
+                NotificationPriority.LOW,
+                "Ticket Comments"
+        );
         
         return mapCommentToDTO(comment, user);
     }
@@ -373,6 +456,67 @@ public class TicketService {
         commentRepository.delete(comment);
     }
 
+    // ==================== SLA METHODS ====================
+
+public String getSlaStatus(Ticket ticket) {
+    LocalDateTime now = LocalDateTime.now();
+    long hoursOpen = Duration.between(ticket.getCreatedAt(), now).toHours();
+    
+    // If ticket is resolved or closed
+    if (ticket.getStatus() == TicketStatus.RESOLVED || 
+        ticket.getStatus() == TicketStatus.CLOSED) {
+        if (ticket.getResolvedAt() != null) {
+            long hoursToResolve = Duration.between(ticket.getCreatedAt(), ticket.getResolvedAt()).toHours();
+            if (hoursToResolve <= 24) return "✅ Within SLA";
+            if (hoursToResolve <= 48) return "⚠️ Approaching SLA";
+            return "🔴 SLA Breached";
+        }
+    }
+    
+    // For open tickets
+    if (hoursOpen <= 24) return "🟢 On Track";
+    if (hoursOpen <= 48) return "🟡 Urgent - Action Required";
+    return "🔴 Overdue - SLA Breached";
+}
+
+public String getSlaColor(Ticket ticket) {
+    LocalDateTime now = LocalDateTime.now();
+    long hoursOpen = Duration.between(ticket.getCreatedAt(), now).toHours();
+    
+    if (ticket.getStatus() == TicketStatus.RESOLVED || 
+        ticket.getStatus() == TicketStatus.CLOSED) {
+        if (ticket.getResolvedAt() != null) {
+            long hoursToResolve = Duration.between(ticket.getCreatedAt(), ticket.getResolvedAt()).toHours();
+            if (hoursToResolve <= 24) return "#22c55e";
+            if (hoursToResolve <= 48) return "#eab308";
+            return "#ef4444";
+        }
+    }
+    
+    if (hoursOpen <= 24) return "#22c55e";
+    if (hoursOpen <= 48) return "#eab308";
+    return "#ef4444";
+}
+
+public int getSlaPercentage(Ticket ticket) {
+    long hoursOpen = Duration.between(ticket.getCreatedAt(), LocalDateTime.now()).toHours();
+    // Cap at 72 hours (3 days)
+    int percentage = (int) Math.min((hoursOpen * 100) / 72, 100);
+    return Math.max(percentage, 5); // Minimum 5%
+}
+
+public String getFormattedTimeOpen(Ticket ticket) {
+    LocalDateTime now = LocalDateTime.now();
+    long hours = Duration.between(ticket.getCreatedAt(), now).toHours();
+    long days = hours / 24;
+    hours = hours % 24;
+    
+    if (days > 0) {
+        return days + "d " + hours + "h";
+    }
+    return hours + " hours";
+}
+
     // ==================== ATTACHMENTS ====================
 
     public TicketAttachment getAttachment(Long attachmentId) {
@@ -413,6 +557,34 @@ public class TicketService {
                 attachmentRepository.save(attachment);
             }
         }
+    }
+
+    private String describeTicketTarget(Ticket ticket) {
+        if (ticket.getLocationText() != null && !ticket.getLocationText().isBlank()) {
+            return ticket.getLocationText();
+        }
+
+        if (ticket.getResourceId() != null) {
+            return "resource #" + ticket.getResourceId();
+        }
+
+        return "the reported location";
+    }
+
+    private String humanizeTicketStatus(TicketStatus status) {
+        return status.name().replace('_', ' ');
+    }
+
+    private NotificationPriority resolvePriority(TicketPriority priority) {
+        if (priority == null) {
+            return NotificationPriority.MEDIUM;
+        }
+
+        return switch (priority) {
+            case CRITICAL, HIGH -> NotificationPriority.HIGH;
+            case MEDIUM -> NotificationPriority.MEDIUM;
+            case LOW -> NotificationPriority.LOW;
+        };
     }
 
     private CommentResponseDTO mapCommentToDTO(Comment comment, User currentUser) {

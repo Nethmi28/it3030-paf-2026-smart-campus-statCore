@@ -6,15 +6,33 @@ import {
   ClipboardList, Wrench, PieChart
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useToast } from '../../../contexts/ToastContext';
 import { bookingService } from '../../../services/bookingService';
 import { ticketService } from '../../../services/ticketService';
 import ResourceAnalysis from '../../../components/resources/ResourceAnalysis';
 import BookingAnalysis from '../../../components/resources/BookingAnalysis';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8089';
+const weeklyUsageSeries = [
+  { day: 'Mon', value: 40 },
+  { day: 'Tue', value: 60 },
+  { day: 'Wed', value: 55 },
+  { day: 'Thu', value: 80 },
+  { day: 'Fri', value: 70 },
+  { day: 'Sat', value: 95 },
+  { day: 'Sun', value: 50 },
+];
+
+const escapeHtml = (value) => String(value ?? '')
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&#39;');
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [stats, setStats] = useState({ 
     totalFacilities: 0, 
@@ -115,6 +133,251 @@ export default function ManagerDashboard() {
   };
 
 
+  const handleGenerateOperationsReport = () => {
+    const reportWindow = window.open('', '_blank', 'width=1180,height=900');
+
+    if (!reportWindow) {
+      showToast({
+        variant: 'error',
+        title: 'Popup Blocked',
+        message: 'Please allow popups for this site so the operations report can open.',
+      });
+      return;
+    }
+
+    const usageRows = weeklyUsageSeries.map((entry) => `
+      <tr>
+        <td>${escapeHtml(entry.day)}</td>
+        <td>${escapeHtml(entry.value)}%</td>
+      </tr>
+    `).join('');
+
+    const reportHtml = `
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Operations View Report</title>
+          <style>
+            * { box-sizing: border-box; }
+            body {
+              margin: 0;
+              font-family: Arial, Helvetica, sans-serif;
+              color: #0f172a;
+              background: #f8fafc;
+            }
+            .page {
+              max-width: 1100px;
+              margin: 0 auto;
+              background: #ffffff;
+              min-height: 100vh;
+            }
+            .header {
+              background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+              color: #ffffff;
+              padding: 28px 40px;
+              display: flex;
+              justify-content: space-between;
+              gap: 24px;
+              align-items: flex-start;
+            }
+            .brand-title {
+              margin: 0 0 6px;
+              font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+              font-size: 22px;
+              letter-spacing: 0.01em;
+              font-weight: 800;
+            }
+            .brand-copy {
+              font-size: 13px;
+              opacity: 0.9;
+            }
+            .report-title {
+              text-align: right;
+            }
+            .report-title h1 {
+              margin: 0 0 6px;
+              font-size: 24px;
+              font-weight: 800;
+            }
+            .report-title p {
+              margin: 0;
+              font-size: 13px;
+              opacity: 0.9;
+            }
+            .content {
+              padding: 32px 40px 40px;
+            }
+            .section {
+              margin-bottom: 30px;
+            }
+            h2 {
+              font-size: 22px;
+              margin: 0 0 18px;
+              color: #0f172a;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: 220px 1fr;
+              gap: 10px 18px;
+              font-size: 14px;
+            }
+            .info-label {
+              color: #475569;
+              font-weight: 700;
+            }
+            .info-value {
+              color: #0f172a;
+              font-weight: 600;
+            }
+            .summary-grid {
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 14px;
+            }
+            .summary-card {
+              border: 1px solid #dbeafe;
+              border-radius: 16px;
+              padding: 16px 18px;
+              background: #eff6ff;
+            }
+            .summary-label {
+              font-size: 12px;
+              text-transform: uppercase;
+              letter-spacing: 0.04em;
+              color: #475569;
+              margin-bottom: 8px;
+              font-weight: 700;
+            }
+            .summary-value {
+              font-size: 26px;
+              font-weight: 800;
+              color: #0f172a;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 13px;
+            }
+            thead th {
+              text-align: left;
+              padding: 12px 10px;
+              background: #e2f6f0;
+              color: #0f766e;
+              border-bottom: 1px solid #bfdbd3;
+              font-size: 12px;
+              letter-spacing: 0.03em;
+              text-transform: uppercase;
+            }
+            tbody td {
+              padding: 12px 10px;
+              border-bottom: 1px solid #e2e8f0;
+            }
+            tbody tr:nth-child(even) {
+              background: #f8fafc;
+            }
+            .footer-note {
+              margin-top: 16px;
+              font-size: 12px;
+              color: #64748b;
+            }
+            @media print {
+              body {
+                background: #ffffff;
+              }
+              .page {
+                max-width: none;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="page">
+            <div class="header">
+              <div>
+                <div class="brand-title">FACILIO HUB</div>
+                <div class="brand-copy">Campus operations and facility oversight</div>
+              </div>
+              <div class="report-title">
+                <h1>OPERATIONS VIEW REPORT</h1>
+                <p>Manager dashboard overview</p>
+              </div>
+            </div>
+            <div class="content">
+              <div class="section">
+                <h2>Report Information</h2>
+                <div class="info-grid">
+                  <div class="info-label">Generated On</div>
+                  <div class="info-value">${escapeHtml(new Date().toLocaleString())}</div>
+                  <div class="info-label">Generated By</div>
+                  <div class="info-value">${escapeHtml(user?.email || user?.name || 'Manager')}</div>
+                  <div class="info-label">Report Scope</div>
+                  <div class="info-value">Operations dashboard summary and weekly facility usage snapshot</div>
+                </div>
+              </div>
+
+              <div class="section">
+                <h2>Operations Summary</h2>
+                <div class="summary-grid">
+                  <div class="summary-card">
+                    <div class="summary-label">Total Facilities</div>
+                    <div class="summary-value">${escapeHtml(stats.facilities)}</div>
+                  </div>
+                  <div class="summary-card">
+                    <div class="summary-label">Active Bookings</div>
+                    <div class="summary-value">${escapeHtml(stats.activeBookings)}</div>
+                  </div>
+                  <div class="summary-card">
+                    <div class="summary-label">Pending Reports</div>
+                    <div class="summary-value">${escapeHtml(stats.reports)}</div>
+                  </div>
+                  <div class="summary-card">
+                    <div class="summary-label">Maintenance</div>
+                    <div class="summary-value">${escapeHtml(stats.repairs)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="section">
+                <h2>Weekly Facility Usage</h2>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Day</th>
+                      <th>Usage Level</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${usageRows}
+                  </tbody>
+                </table>
+                <div class="footer-note">
+                  The weekly usage snapshot reflects the current dashboard visualization at the time of report generation.
+                </div>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    reportWindow.document.open();
+    reportWindow.document.write(reportHtml);
+    reportWindow.document.close();
+    reportWindow.focus();
+
+    setTimeout(() => {
+      reportWindow.print();
+    }, 300);
+
+    showToast({
+      variant: 'success',
+      title: 'Report Ready',
+      message: 'The operations report opened in a new window. Use the print dialog to save it as a PDF.',
+    });
+  };
+
   return (
     <div style={{ padding: '32px', maxWidth: '1600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '56px' }}>
       
@@ -169,11 +432,75 @@ export default function ManagerDashboard() {
         ))}
       </div>
 
-      {/* Resource Analysis Section */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingLeft: '8px' }}>
-          <div style={{ width: '4px', height: '24px', background: 'var(--accent)', borderRadius: '2px' }}></div>
-          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-0.01em' }}>Infrastructure Insights</h3>
+      <div style={{
+        ...surfaceStyle,
+        marginBottom: '24px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '20px',
+        flexWrap: 'wrap',
+        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.06) 100%)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: '260px' }}>
+          <div style={{
+            width: '52px',
+            height: '52px',
+            borderRadius: '16px',
+            background: '#dbeafe',
+            color: '#2563eb',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0
+          }}>
+            <FileText size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '1.15rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
+              Operations Reports &amp; Analytics
+            </div>
+            <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+              Current scope: facilities, booking load, maintenance status, and weekly usage trends
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={handleGenerateOperationsReport}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '12px 24px',
+            borderRadius: '12px',
+            border: 'none',
+            background: '#3b82f6',
+            color: 'white',
+            cursor: 'pointer',
+            fontWeight: '700',
+            fontSize: '0.95rem',
+            boxShadow: '0 14px 28px rgba(59, 130, 246, 0.24)'
+          }}
+        >
+          <Download size={18} />
+          Generate Report
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+        <div style={surfaceStyle}>
+          <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>Weekly facility usage</h3>
+          <div style={{ height: '240px', display: 'flex', alignItems: 'flex-end', gap: '12px', borderBottom: '1px solid var(--border-color)', paddingTop: '40px' }}>
+            {weeklyUsageSeries.map((entry) => (
+              <div key={entry.day} style={{ flex: 1, background: '#3b82f6', height: `${entry.value}%`, borderRadius: '6px 6px 0 0', opacity: 0.8, transition: 'all 0.3s' }} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            {weeklyUsageSeries.map((entry) => (
+              <span key={entry.day}>{entry.day}</span>
+            ))}
+          </div>
         </div>
         <div className="glass-card" style={{ padding: '4px', borderRadius: '32px' }}>
           <ResourceAnalysis />
