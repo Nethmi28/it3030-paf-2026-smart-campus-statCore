@@ -52,74 +52,76 @@ export default function DashboardLayout() {
   return (
     <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-alt)', overflow: 'hidden' }}>
 
-      {/* Sidebar */}
-      <div style={{ width: '260px', backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-color)' }}>
-        <div style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid var(--border-color)' }}>
-          <div style={{ background: '#3b82f6', color: 'white', padding: '8px', borderRadius: '8px', display: 'flex' }}>
-            <School size={24} />
+      {/* Sidebar - Only shown for registered users */}
+      {user && (
+        <div style={{ width: '260px', backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-color)' }}>
+          <div style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid var(--border-color)' }}>
+            <div style={{ background: '#3b82f6', color: 'white', padding: '8px', borderRadius: '8px', display: 'flex' }}>
+              <School size={24} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '1rem' }}>Facilio Hub</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{currentUser.role.replace('ROLE_', '')} PORTAL</div>
+            </div>
           </div>
-          <div>
-            <div style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '1rem' }}>Facilio Hub</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{currentUser.role.replace('ROLE_', '')} PORTAL</div>
-          </div>
-        </div>
 
-        <div style={{ padding: '24px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {menuItems.map(item => (
-            <NavLink
-              key={item.id}
-              to={`/dashboard${item.id ? '/' + item.id : ''}`}
-              end={item.exact}
-              style={({ isActive }) => ({
+          <div style={{ padding: '24px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {menuItems.map(item => (
+              <NavLink
+                key={item.id}
+                to={`/dashboard${item.id ? '/' + item.id : ''}`}
+                end={item.exact}
+                style={({ isActive }) => ({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px 16px',
+                  width: '100%',
+                  background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
+                  color: isActive ? 'var(--sidebar-active-text)' : 'var(--text-muted)',
+                  border: isActive ? '1px solid var(--sidebar-active-border)' : '1px solid transparent',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontWeight: isActive ? '600' : '500',
+                  boxShadow: isActive ? '0 12px 24px rgba(37, 99, 235, 0.14)' : 'none',
+                  transition: 'background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+                  textDecoration: 'none'
+                })}
+              >
+                {item.icon}
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+
+          <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)' }}>
+            <button
+              onClick={logout}
+              title="Logout"
+              style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                padding: '14px 16px',
                 width: '100%',
-                background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
-                color: isActive ? 'var(--sidebar-active-text)' : 'var(--text-muted)',
-                border: isActive ? '1px solid var(--sidebar-active-border)' : '1px solid transparent',
+                padding: '14px 16px',
                 borderRadius: '12px',
+                border: 'none',
+                background: 'transparent',
+                color: '#ef4444',
                 cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '0.95rem',
                 textAlign: 'left',
-                fontWeight: isActive ? '600' : '500',
-                boxShadow: isActive ? '0 12px 24px rgba(37, 99, 235, 0.14)' : 'none',
-                transition: 'background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
-                textDecoration: 'none'
-              })}
+                transition: 'color 0.2s ease'
+              }}
             >
-              {item.icon}
-              {item.label}
-            </NavLink>
-          ))}
+              <LogOut size={18} />
+              Logout
+            </button>
+          </div>
         </div>
-
-        <div style={{ padding: '16px', borderTop: '1px solid var(--border-color)' }}>
-          <button
-            onClick={logout}
-            title="Logout"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              width: '100%',
-              padding: '14px 16px',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'transparent',
-              color: '#ef4444',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '0.95rem',
-              textAlign: 'left',
-              transition: 'color 0.2s ease'
-            }}
-          >
-            <LogOut size={18} />
-            Logout
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Main Content Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
