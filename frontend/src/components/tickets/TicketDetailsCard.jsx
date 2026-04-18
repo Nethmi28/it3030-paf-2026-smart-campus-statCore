@@ -48,15 +48,15 @@ const AuthenticatedImage = ({ name, id }) => {
     if (loading) {
         return (
             <div style={{
-                background: '#f1f5f9',
+                background: 'var(--bg-alt)',
                 borderRadius: '12px',
                 height: '160px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1px solid #e2e8f0'
+                border: '1px solid var(--border-color)'
             }}>
-                <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Loading...</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Loading...</div>
             </div>
         );
     }
@@ -84,13 +84,13 @@ const AuthenticatedImage = ({ name, id }) => {
 
     return (
         <div style={{
-            background: '#f8fafc',
+            background: 'var(--bg-alt)',
             borderRadius: '12px',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-            border: '1px solid #e2e8f0',
+            boxShadow: 'var(--shadow)',
+            border: '1px solid var(--border-color)',
             transition: 'transform 0.2s, box-shadow 0.2s'
         }}
             onMouseEnter={(e) => {
@@ -99,7 +99,7 @@ const AuthenticatedImage = ({ name, id }) => {
             }}
             onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                e.currentTarget.style.boxShadow = 'var(--shadow)';
             }}>
             <a href={imgSrc} target="_blank" rel="noreferrer" style={{ display: 'block' }}>
                 <img
@@ -110,11 +110,11 @@ const AuthenticatedImage = ({ name, id }) => {
                         height: '160px',
                         objectFit: 'cover',
                         display: 'block',
-                        backgroundColor: '#f1f5f9'
+                        backgroundColor: 'var(--bg-card)'
                     }}
                 />
             </a>
-            <div style={{ padding: '10px 12px', textAlign: 'center', background: 'white', borderTop: '1px solid #e2e8f0' }}>
+            <div style={{ padding: '10px 12px', textAlign: 'center', background: 'var(--bg-card)', borderTop: '1px solid var(--border-color)' }}>
                 <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: '500', marginBottom: '4px' }}>
                     {displayName}
                 </div>
@@ -123,7 +123,7 @@ const AuthenticatedImage = ({ name, id }) => {
                     download={name}
                     style={{
                         fontSize: '0.65rem',
-                        color: '#64748b',
+                        color: 'var(--text-secondary)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -460,12 +460,12 @@ const getSLAStatus = (createdAt, status, resolvedAt) => {
     const canDelete = (isStudent && isTicketOwner && ticket.status === 'OPEN') || isAdminOrManager;
     const canComment = true;
 
-    const DetailItem = ({ icon, label, value, color = '#64748b' }) => (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 0', borderBottom: '1px solid #e2e8f0' }}>
+    const DetailItem = ({ icon, label, value, color = 'var(--text-secondary)' }) => (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--border-color)' }}>
             <div style={{ color: color, marginTop: '2px' }}>{icon}</div>
             <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{label}</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: '500', color: '#1e293b' }}>{value || 'Not provided'}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>{label}</div>
+                <div style={{ fontSize: '0.9rem', fontWeight: '500', color: 'var(--text-primary)' }}>{value || 'Not provided'}</div>
             </div>
         </div>
     );
@@ -557,10 +557,10 @@ const getSLAStatus = (createdAt, status, resolvedAt) => {
             </div>
 
             {/* Main Content */}
-            <div style={{ background: '#f8fafc', padding: '28px', borderRadius: '0 0 16px 16px' }}>
+            <div style={{ background: 'var(--bg-alt)', padding: '28px', borderRadius: '0 0 16px 16px' }}>
 
                 {error && (
-                    <div style={{ background: '#fee2e2', color: '#dc2626', padding: '14px 18px', borderRadius: '12px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px', borderLeft: '4px solid #dc2626' }}>
+                    <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '14px 18px', borderRadius: '12px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px', borderLeft: '4px solid #ef4444' }}>
                         <AlertTriangle size={18} />
                         <span style={{ fontSize: '0.875rem' }}>{error}</span>
                     </div>
@@ -572,36 +572,36 @@ const getSLAStatus = (createdAt, status, resolvedAt) => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
 {/* Description Card */}
-<div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+<div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)' }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-        <div style={{ background: '#eff6ff', padding: '8px', borderRadius: '10px', color: '#3b82f6' }}>
+        <div style={{ background: 'var(--bg-icon)', padding: '8px', borderRadius: '10px', color: '#3b82f6' }}>
             <FileImage size={18} />
         </div>
-        <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#0f172a' }}>Issue Description</h4>
+        <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>Issue Description</h4>
     </div>
     {/* Render HTML content from TipTap */}
     <div 
-        style={{ margin: 0, color: '#334155', lineHeight: '1.7', fontSize: '0.95rem' }}
+        style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: '1.7', fontSize: '0.95rem' }}
         dangerouslySetInnerHTML={{ __html: ticket.description }}
     />
 </div>
 
                         {/* Comments Card */}
-                        <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <div style={{ background: '#f1f5f9', padding: '8px', borderRadius: '10px', color: '#64748b' }}>
+                        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ background: 'var(--bg-icon)', padding: '8px', borderRadius: '10px', color: 'var(--text-muted)' }}>
                                     <MessageSquare size={18} />
                                 </div>
-                                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#0f172a' }}>Discussion ({comments.length})</h4>
+                                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)' }}>Discussion ({comments.length})</h4>
                             </div>
 
-                            <div style={{ padding: '20px 24px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '400px', overflowY: 'auto', background: '#faf9f7' }}>
+                            <div style={{ padding: '20px 24px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '400px', overflowY: 'auto', background: 'var(--bg-alt)' }}>
                                 {loading ? (
                                     <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>Loading comments...</div>
                                 ) : comments.length === 0 ? (
                                     <div style={{ textAlign: 'center', padding: '40px' }}>
-                                        <MessageSquare size={40} style={{ color: '#cbd5e1', marginBottom: '12px' }} />
-                                        <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No comments yet. Start the conversation!</p>
+                                        <MessageSquare size={40} style={{ color: 'var(--border-color)', marginBottom: '12px' }} />
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No comments yet. Start the conversation!</p>
                                     </div>
                                 ) : (
                                     comments.map((c) => {
@@ -614,14 +614,14 @@ const getSLAStatus = (createdAt, status, resolvedAt) => {
                                             <div key={c.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                                                 <div style={{
                                                     maxWidth: '85%',
-                                                    background: isMe ? '#3b82f6' : 'white',
-                                                    color: isMe ? 'white' : '#1e293b',
+                                                    background: isMe ? '#3b82f6' : 'var(--bg-card)',
+                                                    color: isMe ? 'white' : 'var(--text-primary)',
                                                     padding: '12px 16px',
                                                     borderRadius: '16px',
                                                     borderTopRightRadius: isMe ? '4px' : '16px',
                                                     borderTopLeftRadius: isMe ? '16px' : '4px',
                                                     boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                                                    border: !isMe ? '1px solid #e2e8f0' : 'none'
+                                                    border: !isMe ? '1px solid var(--border-color)' : 'none'
                                                 }}>
                                                     <div style={{ fontSize: '0.7rem', marginBottom: '6px', opacity: 0.7, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                                         <span style={{ fontWeight: '600' }}>{isMe ? 'You' : c.authorName}</span>
@@ -658,14 +658,14 @@ const getSLAStatus = (createdAt, status, resolvedAt) => {
                             </div>
 
                             {(ticket.status !== 'CLOSED' && ticket.status !== 'REJECTED' && canComment) ? (
-                                <div style={{ padding: '16px 20px', borderTop: '1px solid #e2e8f0', background: 'white', borderRadius: '0 0 16px 16px' }}>
+                                <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border-color)', background: 'var(--bg-card)', borderRadius: '0 0 16px 16px' }}>
                                     <form onSubmit={handleCommentSubmit} style={{ display: 'flex', gap: '12px' }}>
                                         <input
                                             type="text"
                                             value={comment}
                                             onChange={(e) => setComment(e.target.value)}
                                             placeholder="Write a comment..."
-                                            style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '0.9rem', background: '#f8fafc' }}
+                                            style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', border: '1px solid var(--border-color)', outline: 'none', fontSize: '0.9rem', background: 'var(--bg-alt)', color: 'var(--text-primary)' }}
                                             disabled={submitting}
                                         />
                                         <button type="submit" disabled={submitting} style={{ background: '#3b82f6', color: 'white', border: 'none', borderRadius: '24px', padding: '0 20px', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -689,8 +689,8 @@ const getSLAStatus = (createdAt, status, resolvedAt) => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
                         {/* Ticket Details Card */}
-                        <div style={{ background: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-                            <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: '600', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)' }}>
+                            <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Tag size={16} color="#3b82f6" /> Ticket Information
                             </h4>
                             <DetailItem icon={<MapPin size={16} />} label="Location" value={ticket.locationText} color="#3b82f6" />
@@ -703,9 +703,9 @@ const getSLAStatus = (createdAt, status, resolvedAt) => {
                                         <span>{ticket.assignedToName || 'Unassigned'}</span>
                                         {canAssignTechnician && (
                                             <>
-                                                <select value={selectedTechnicianId} onChange={(e) => setSelectedTechnicianId(e.target.value)} style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.75rem', background: 'white' }}>
+                                                <select value={selectedTechnicianId} onChange={(e) => setSelectedTechnicianId(e.target.value)} style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.75rem', background: 'var(--bg-alt)', color: 'var(--text-primary)' }}>
                                                     <option value="">Select Tech</option>
-                                                    {technicians.map(tech => (<option key={tech.id} value={tech.id}>{tech.name}</option>))}
+                                                    {technicians.map(tech => (<option key={tech.id} value={tech.id} style={{ background: 'var(--bg-card)' }}>{tech.name}</option>))}
                                                 </select>
                                                 <button onClick={handleAssignTechnician} disabled={assigningTech || !selectedTechnicianId} style={{ background: '#3b82f6', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '0.7rem', color: 'white', cursor: 'pointer' }}>Assign</button>
                                             </>
@@ -717,26 +717,26 @@ const getSLAStatus = (createdAt, status, resolvedAt) => {
                             {ticket.rejectedReason && <DetailItem icon={<XCircle size={16} />} label="Rejection Reason" value={ticket.rejectedReason} color="#dc2626" />}
                         </div>
                           {/* SLA Timer Card - Add this RIGHT HERE */}
-    <div style={{ background: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-        <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: '600', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)' }}>
+        <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Clock size={16} color="#8b5cf6" /> SLA Performance
         </h4>
         
         {/* Time display */}
-        <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '16px', marginBottom: '16px', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '8px' }}>Time Since Creation</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' }}>
+        <div style={{ background: 'var(--bg-alt)', borderRadius: '12px', padding: '16px', marginBottom: '16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Time Since Creation</div>
+            <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-primary)' }}>
                 {calculateTimeOpen(ticket.createdAt)}
             </div>
         </div>
         
         {/* Progress bar */}
         <div style={{ marginBottom: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.7rem', color: '#64748b' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
                 <span>SLA Target (72h)</span>
                 <span>{calculateSLAPercentage(ticket.createdAt)}%</span>
             </div>
-            <div style={{ background: '#e2e8f0', borderRadius: '10px', height: '8px', overflow: 'hidden' }}>
+            <div style={{ background: 'var(--border-color)', borderRadius: '10px', height: '8px', overflow: 'hidden' }}>
                 <div style={{ 
                     width: `${calculateSLAPercentage(ticket.createdAt)}%`, 
                     height: '100%', 
@@ -784,15 +784,15 @@ const getSLAStatus = (createdAt, status, resolvedAt) => {
 
                         {/* Update Status Card */}
                         {canUpdateStatus && (
-                            <div style={{ background: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-                                <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: '600', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)' }}>
+                                <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <RefreshCw size={16} color="#22c55e" /> Update Status
                                 </h4>
-                                <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginBottom: '12px' }}>
-                                    {getStatusOptions().map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+                                <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem', marginBottom: '12px', background: 'var(--bg-alt)', color: 'var(--text-primary)' }}>
+                                    {getStatusOptions().map(opt => (<option key={opt.value} value={opt.value} style={{ background: 'var(--bg-card)' }}>{opt.label}</option>))}
                                 </select>
                                 {selectedStatus === 'RESOLVED' && (
-                                    <textarea placeholder="Add resolution notes..." value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginBottom: '12px', minHeight: '80px' }} />
+                                    <textarea placeholder="Add resolution notes..." value={resolutionNotes} onChange={(e) => setResolutionNotes(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem', marginBottom: '12px', minHeight: '80px', background: 'var(--bg-alt)', color: 'var(--text-primary)' }} />
                                 )}
                                 <button onClick={handleStatusUpdate} disabled={updatingStatus} style={{ width: '100%', background: '#22c55e', color: 'white', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                                     <RefreshCw size={14} /> Update Status
@@ -802,9 +802,9 @@ const getSLAStatus = (createdAt, status, resolvedAt) => {
 
                         {/* Reject Ticket Card */}
                         {canReject && (
-                            <div style={{ background: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-                                <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: '600', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <XCircle size={16} color="#dc2626" /> Reject Ticket
+                            <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)' }}>
+                                <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <XCircle size={16} color="#ef4444" /> Reject Ticket
                                 </h4>
                                 <button onClick={handleRejectTicket} style={{ width: '100%', background: '#dc2626', color: 'white', border: 'none', padding: '10px', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                                     <X size={14} /> Reject Ticket
@@ -813,12 +813,12 @@ const getSLAStatus = (createdAt, status, resolvedAt) => {
                         )}
 
                         {/* Attachments Card - IMPROVED GRID VERSION */}
-                        <div style={{ background: 'white', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-                            <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: '600', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)' }}>
+                            <h4 style={{ margin: '0 0 16px 0', fontSize: '1rem', fontWeight: '600', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Paperclip size={16} color="#8b5cf6" /> Attachments ({ticket.attachmentNames?.length || 0})
                             </h4>
                             {(!ticket.attachmentNames || ticket.attachmentNames.length === 0) ? (
-                                <div style={{ textAlign: 'center', padding: '30px', color: '#94a3b8', fontSize: '0.85rem' }}>
+                                <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                                     <Paperclip size={32} style={{ marginBottom: '8px', opacity: 0.3 }} />
                                     <p>No attachments uploaded</p>
                                 </div>
@@ -837,30 +837,30 @@ const getSLAStatus = (createdAt, status, resolvedAt) => {
                                             <a href={`http://localhost:8089/api/tickets/attachments/${id}`} target="_blank" rel="noreferrer" key={index} style={{ textDecoration: 'none' }}>
                                                 <div style={{
                                                     padding: '16px',
-                                                    border: '1px solid #e2e8f0',
+                                                    border: '1px solid var(--border-color)',
                                                     borderRadius: '12px',
                                                     display: 'flex',
                                                     flexDirection: 'column',
                                                     alignItems: 'center',
                                                     gap: '10px',
                                                     cursor: 'pointer',
-                                                    background: '#f8fafc',
+                                                    background: 'var(--bg-alt)',
                                                     transition: 'all 0.2s',
                                                     textAlign: 'center'
                                                 }}
                                                     onMouseEnter={(e) => {
-                                                        e.currentTarget.style.background = '#eff6ff';
-                                                        e.currentTarget.style.borderColor = '#3b82f6';
+                                                        e.currentTarget.style.background = 'var(--bg-icon)';
+                                                        e.currentTarget.style.borderColor = 'var(--accent)';
                                                     }}
                                                     onMouseLeave={(e) => {
-                                                        e.currentTarget.style.background = '#f8fafc';
-                                                        e.currentTarget.style.borderColor = '#e2e8f0';
+                                                        e.currentTarget.style.background = 'var(--bg-alt)';
+                                                        e.currentTarget.style.borderColor = 'var(--border-color)';
                                                     }}>
                                                     <FileImage size={32} color="#3b82f6" />
                                                     <span style={{ fontSize: '0.75rem', color: '#3b82f6', wordBreak: 'break-word' }}>
                                                         {name.length > 30 ? name.substring(0, 30) + '...' : name}
                                                     </span>
-                                                    <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Click to view</span>
+                                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Click to view</span>
                                                 </div>
                                             </a>
                                         );

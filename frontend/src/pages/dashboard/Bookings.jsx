@@ -1,22 +1,32 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { CalendarPlus, CalendarClock, CheckCircle, ArrowLeft, Building, Users, Clock, FileText, AlertCircle, UploadCloud } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Building, Users, Clock, FileText, AlertCircle, UploadCloud } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { bookingService } from '../../services/bookingService';
+import ManagerBookingsView from './ManagerBookingsView';
+import {
+  BOOKING_DAY_END_TIME,
+  LAST_BOOKING_SLOT_LABEL,
+  formatBookingRange,
+  formatBookingTime,
+  isOutsideBookingWindow,
+} from '../../utils/bookingTime';
 
 const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8089';
-import ManagerBookingsView from './ManagerBookingsView';
 
 export function StudentBookingsView() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const { showToast, showConfirm } = useToast();
 
   const [activeTab, setActiveTab] = useState(location.state?.action === 'create' ? 'create' : 'view');
   const [resources, setResources] = useState([]);
   const [loadingResources, setLoadingResources] = useState(false);
   const [myBookings, setMyBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [bookingError, setBookingError] = useState('');
+  const [qrBooking, setQrBooking] = useState(null);
 
   // Availability check
   const [conflicts, setConflicts] = useState([]);
@@ -45,31 +55,54 @@ export function StudentBookingsView() {
   useEffect(() => {
     if (activeTab === 'create' && resources.length === 0) {
       fetchResources();
-    } else if (activeTab === 'view') {
+    } else if (activeTab === 'view' && user?.token) {
       fetchMyBookings();
     }
-  }, [activeTab]);
+  }, [activeTab, user?.token]);
 
   const fetchMyBookings = async () => {
     if (!user?.token) return;
     setLoadingBookings(true);
+    setBookingError('');
     try {
       const data = await bookingService.getMyBookings(user.token);
       setMyBookings(data);
     } catch (err) {
       console.error('Failed to fetch bookings', err);
+      setBookingError(err.message || 'Unable to load your bookings right now.');
     } finally {
       setLoadingBookings(false);
     }
   };
 
   const handleCancelBooking = async (id) => {
-    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+    const confirmed = await showConfirm({
+      title: 'Cancel Booking',
+      message: 'Are you sure you want to cancel this booking?',
+      confirmLabel: 'Cancel Booking',
+      cancelLabel: 'Keep Booking',
+      confirmTone: 'danger',
+    });
+
+    if (!confirmed) return;
+
     try {
       await bookingService.cancelBooking(user.token, id);
+      if (qrBooking?.id === id) {
+        setQrBooking(null);
+      }
       fetchMyBookings();
+      showToast({
+        variant: 'success',
+        title: 'Booking Cancelled',
+        message: 'The booking was cancelled successfully.',
+      });
     } catch(err) {
-      alert("Failed to cancel booking: " + err.message);
+      showToast({
+        variant: 'error',
+        title: 'Cancellation Failed',
+        message: err.message || 'Failed to cancel the booking.',
+      });
     }
   };
 
@@ -95,6 +128,9 @@ export function StudentBookingsView() {
     [resources, formData.resourceId]);
 
   const isAuditorium = selectedResource?.name?.toLowerCase().includes('auditorium');
+  const effectiveDurationHours = isAuditorium ? durationHours : 2;
+  const attendeeLimit = selectedResource?.capacity ?? null;
+  const lastBookingErrorMessage = `Bookings must end by ${formatBookingTime(BOOKING_DAY_END_TIME)}. The last booking period is ${LAST_BOOKING_SLOT_LABEL}.`;
 
   // Fetch availability when date changes
   useEffect(() => {
@@ -122,7 +158,7 @@ export function StudentBookingsView() {
       const [hours, mins] = formData.startTime.split(':');
       const startDate = new Date();
       startDate.setHours(parseInt(hours), parseInt(mins), 0);
-      startDate.setHours(startDate.getHours() + durationHours); // Add duration
+      startDate.setHours(startDate.getHours() + effectiveDurationHours);
 
       const newEndHours = startDate.getHours().toString().padStart(2, '0');
       const newEndMins = startDate.getMinutes().toString().padStart(2, '0');
@@ -131,8 +167,10 @@ export function StudentBookingsView() {
       if (formData.endTime !== calculatedEndTime) {
         setFormData(prev => ({ ...prev, endTime: calculatedEndTime }));
       }
+    } else if (formData.endTime) {
+      setFormData(prev => ({ ...prev, endTime: '' }));
     }
-  }, [formData.startTime, durationHours]);
+  }, [formData.startTime, formData.endTime, effectiveDurationHours]);
 
   // Determine if there is a conflict right now
   const hasConflict = useMemo(() => {
@@ -157,8 +195,81 @@ export function StudentBookingsView() {
     });
   }, [formData.startTime, formData.endTime, conflicts]);
 
+  const hasLateTimeSelection = useMemo(
+    () => isOutsideBookingWindow(formData.endTime),
+    [formData.endTime]
+  );
+
+  const qrImageUrl = useMemo(
+    () => qrBooking?.checkInPayload
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(qrBooking.checkInPayload)}`
+      : '',
+    [qrBooking]
+  );
+
+  const formatCheckInTimestamp = (timestamp) => {
+    if (!timestamp) {
+      return '';
+    }
+    return new Date(timestamp).toLocaleString();
+  };
+
+  const handleCopyCheckInCode = async () => {
+    if (!qrBooking?.checkInPayload) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(qrBooking.checkInPayload);
+      showToast({
+        variant: 'success',
+        title: 'Check-In Code Copied',
+        message: 'The booking QR payload is ready to paste into the verification screen.',
+      });
+    } catch (error) {
+      showToast({
+        variant: 'error',
+        title: 'Copy Failed',
+        message: 'Unable to copy the QR code data right now.',
+      });
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === 'resourceId') {
+      const nextResource = resources.find(resource => resource.id.toString() === value.toString());
+
+      setFormData(prev => ({
+        ...prev,
+        resourceId: value,
+        expectedAttendees: prev.expectedAttendees && nextResource?.capacity
+          ? String(Math.min(Number(prev.expectedAttendees), nextResource.capacity))
+          : prev.expectedAttendees,
+      }));
+      return;
+    }
+
+    if (name === 'expectedAttendees') {
+      if (value === '') {
+        setFormData(prev => ({ ...prev, expectedAttendees: '' }));
+        return;
+      }
+
+      const numericValue = Number(value);
+
+      if (Number.isNaN(numericValue)) {
+        return;
+      }
+
+      const sanitizedValue = Math.max(1, Math.trunc(numericValue));
+      const limitedValue = attendeeLimit ? Math.min(sanitizedValue, attendeeLimit) : sanitizedValue;
+
+      setFormData(prev => ({ ...prev, expectedAttendees: String(limitedValue) }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -170,12 +281,36 @@ export function StudentBookingsView() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (hasLateTimeSelection) {
+      showToast({
+        variant: 'warning',
+        title: 'Invalid Booking Time',
+        message: lastBookingErrorMessage,
+      });
+      return;
+    }
     if (hasConflict) {
-      alert("Cannot submit: The resource is already booked for the selected time.");
+      showToast({
+        variant: 'error',
+        title: 'Time Slot Unavailable',
+        message: 'The resource is already booked for the selected time.',
+      });
+      return;
+    }
+    if (attendeeLimit && Number(formData.expectedAttendees) > attendeeLimit) {
+      showToast({
+        variant: 'warning',
+        title: 'Too Many Attendees',
+        message: `Expected attendees cannot exceed the selected resource capacity of ${attendeeLimit}.`,
+      });
       return;
     }
     if (isAuditorium && !file) {
-      alert("Auditorium bookings require a PDF approval file.");
+      showToast({
+        variant: 'warning',
+        title: 'Approval File Required',
+        message: 'Auditorium bookings require a PDF approval file.',
+      });
       return;
     }
 
@@ -190,7 +325,11 @@ export function StudentBookingsView() {
         additionalRequirements: formData.additionalRequirements
       }, isAuditorium ? file : null);
 
-      alert('Booking request submitted successfully!');
+      showToast({
+        variant: 'success',
+        title: 'Booking Submitted',
+        message: 'Your booking request was submitted successfully.',
+      });
       setActiveTab('view');
       // Reset form
       setFormData({
@@ -199,7 +338,11 @@ export function StudentBookingsView() {
       setFile(null);
       setDurationHours(2);
     } catch (err) {
-      alert(`Error submitting booking: ${err.message}`);
+      showToast({
+        variant: 'error',
+        title: 'Booking Failed',
+        message: err.message || 'Unable to submit the booking request.',
+      });
     }
   };
 
@@ -267,6 +410,11 @@ export function StudentBookingsView() {
           }}>
             {loadingBookings ? (
               <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>Loading...</div>
+            ) : bookingError ? (
+              <div style={{ textAlign: 'center', padding: '48px' }}>
+                <p style={{ fontSize: '1.1rem', marginBottom: '8px', fontWeight: '600', color: 'var(--text-primary)' }}>Couldn&apos;t Load Bookings</p>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{bookingError}</p>
+              </div>
             ) : myBookings.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px' }}>
                 <p style={{ fontSize: '1.2rem', marginBottom: '8px', fontWeight: '600', color: 'var(--text-primary)' }}>No Bookings Found</p>
@@ -290,7 +438,7 @@ export function StudentBookingsView() {
                       <tr key={bk.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                         <td style={{ padding: '16px', fontWeight: '500' }}>{bk.resourceName}</td>
                         <td style={{ padding: '16px', color: 'var(--text-muted)' }}>{bk.bookingDate}</td>
-                        <td style={{ padding: '16px', color: 'var(--text-muted)' }}>{bk.startTime} - {bk.endTime}</td>
+                        <td style={{ padding: '16px', color: 'var(--text-muted)' }}>{formatBookingRange(bk.startTime, bk.endTime)}</td>
                         <td style={{ padding: '16px' }}>
                           <span style={{
                             padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700',
@@ -299,17 +447,41 @@ export function StudentBookingsView() {
                           }}>
                             {bk.status === 'APPROVED' ? 'ACCEPTED' : bk.status}
                           </span>
-                        </td>
-                        <td style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>{bk.adminReason || bk.purpose}</td>
-                        <td style={{ padding: '16px' }}>
-                          {bk.status === 'PENDING' && (
-                            <button 
-                              onClick={() => handleCancelBooking(bk.id)}
-                              style={{ background: '#fee2e2', color: '#ef4444', border: '1px solid #f87171', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
-                            >
-                              Cancel
-                            </button>
+                          {bk.checkedIn && (
+                            <div style={{ marginTop: '6px', fontSize: '0.74rem', fontWeight: '600', color: '#166534' }}>
+                              Checked in
+                            </div>
                           )}
+                        </td>
+                        <td style={{ padding: '16px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          {bk.checkedIn
+                            ? `Checked in on ${formatCheckInTimestamp(bk.checkedInAt)}`
+                            : bk.adminReason || bk.purpose}
+                        </td>
+                        <td style={{ padding: '16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            {bk.status === 'APPROVED' && bk.checkInPayload && (
+                              <button
+                                onClick={() => setQrBooking(bk)}
+                                style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #93c5fd', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
+                              >
+                                View QR
+                              </button>
+                            )}
+                            {!bk.checkedIn && (bk.status === 'PENDING' || bk.status === 'APPROVED') && (
+                              <button 
+                                onClick={() => handleCancelBooking(bk.id)}
+                                style={{ background: '#fee2e2', color: '#ef4444', border: '1px solid #f87171', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
+                              >
+                                Cancel
+                              </button>
+                            )}
+                            {bk.checkedIn && (
+                              <span style={{ background: '#dcfce7', color: '#166534', border: '1px solid #86efac', padding: '6px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700' }}>
+                                Checked In
+                              </span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -418,6 +590,10 @@ export function StudentBookingsView() {
                   )}
                 </div>
 
+                <div style={{ background: 'var(--bg-color)', padding: '12px 14px', borderRadius: '10px', border: '1px dashed var(--border-color)', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  Booking hours end at {formatBookingTime(BOOKING_DAY_END_TIME)}. Last booking period: {LAST_BOOKING_SLOT_LABEL}.
+                </div>
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>End Time</label>
                   <input
@@ -437,10 +613,17 @@ export function StudentBookingsView() {
                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {conflicts.map((slot, i) => (
                            <span key={i} style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', border: '1px solid #fecaca' }}>
-                             {slot.startTime} - {slot.endTime}
+                             {formatBookingRange(slot.startTime, slot.endTime)}
                            </span>
                         ))}
                      </div>
+                  </div>
+                )}
+
+                {hasLateTimeSelection && (
+                  <div style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.35)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
+                    <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <span>{lastBookingErrorMessage}</span>
                   </div>
                 )}
 
@@ -470,9 +653,15 @@ export function StudentBookingsView() {
                         required
                         placeholder="Number of guests"
                         min="1"
+                        max={attendeeLimit || undefined}
                         style={{ ...inputStyle, paddingLeft: '38px' }}
                       />
                     </div>
+                    {attendeeLimit && (
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        Maximum {attendeeLimit} attendees for the selected resource.
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -503,13 +692,13 @@ export function StudentBookingsView() {
                     <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '12px' }}>Reservation Summary</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                       <span>Date:</span> <span style={{ color: 'var(--text-primary)' }}>{formData.date || '--'}</span>
-                      <span>Time:</span> <span style={{ color: 'var(--text-primary)' }}>{formData.startTime ? `${formData.startTime} - ${formData.endTime}` : '--'}</span>
+                      <span>Time:</span> <span style={{ color: 'var(--text-primary)' }}>{formData.startTime ? formatBookingRange(formData.startTime, formData.endTime) : '--'}</span>
                       <span>Guests:</span> <span style={{ color: 'var(--text-primary)' }}>{formData.expectedAttendees || '--'}</span>
                     </div>
                   </div>
 
                   {(() => {
-                    const isDisabled = hasConflict || !formData.date || !formData.startTime || !formData.resourceId || !formData.expectedAttendees || !formData.purpose || (isAuditorium && !file);
+                    const isDisabled = hasConflict || hasLateTimeSelection || !formData.date || !formData.startTime || !formData.resourceId || !formData.expectedAttendees || !formData.purpose || (isAuditorium && !file);
                     return (
                       <button
                         type="submit"
@@ -532,6 +721,86 @@ export function StudentBookingsView() {
           </div>
         )}
       </div>
+      {qrBooking && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div
+            onClick={() => setQrBooking(null)}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.48)', backdropFilter: 'blur(4px)' }}
+          />
+          <div style={{
+            position: 'relative',
+            zIndex: 1,
+            width: 'min(520px, calc(100vw - 32px))',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '20px',
+            padding: '28px',
+            boxShadow: '0 30px 60px rgba(15, 23, 42, 0.25)',
+            color: 'var(--text-primary)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px'
+          }}>
+            <div>
+              <div style={{ fontSize: '0.78rem', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#2563eb', marginBottom: '8px' }}>
+                Booking Check-In
+              </div>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: '800', marginBottom: '6px' }}>{qrBooking.resourceName}</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>
+                Show this QR code to the manager on {qrBooking.bookingDate} during your approved booking window.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: '20px', alignItems: 'center' }}>
+              <div style={{ background: '#ffffff', borderRadius: '18px', padding: '16px', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '220px' }}>
+                {qrImageUrl ? (
+                  <img
+                    src={qrImageUrl}
+                    alt={`QR code for booking ${qrBooking.id}`}
+                    style={{ width: '100%', maxWidth: '220px', aspectRatio: '1 / 1', objectFit: 'contain' }}
+                  />
+                ) : (
+                  <span style={{ color: '#64748b', fontSize: '0.9rem', textAlign: 'center' }}>QR code unavailable</span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ background: 'var(--bg-alt)', borderRadius: '14px', padding: '14px', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>Check-In Code</div>
+                  <div style={{ fontFamily: 'Consolas, monospace', fontSize: '0.8rem', lineHeight: 1.5, wordBreak: 'break-all', color: 'var(--text-muted)' }}>
+                    {qrBooking.checkInPayload}
+                  </div>
+                </div>
+
+                {qrBooking.checkedIn ? (
+                  <div style={{ background: '#dcfce7', border: '1px solid #86efac', color: '#166534', borderRadius: '14px', padding: '14px', fontSize: '0.9rem', fontWeight: '600' }}>
+                    Checked in on {formatCheckInTimestamp(qrBooking.checkedInAt)}
+                  </div>
+                ) : (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+                    If the QR image does not load, the manager can still paste the check-in code into the verification box.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleCopyCheckInCode}
+                style={{ background: 'var(--bg-alt)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', padding: '10px 16px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+              >
+                Copy Code
+              </button>
+              <button
+                onClick={() => setQrBooking(null)}
+                style={{ background: '#2563eb', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '700' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
