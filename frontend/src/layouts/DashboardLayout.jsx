@@ -1,15 +1,58 @@
+import { useEffect, useState } from 'react';
 import {
   School, LayoutDashboard, Layers, CalendarDays, Ticket, Bell, LogOut, UserPlus
 } from 'lucide-react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import ThemeToggle from '../components/common/ThemeToggle';
+import { notificationService } from '../services/notificationService';
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Safe fallback if not fully loaded yet to prevent flashes
   const currentUser = user || { name: 'Guest', role: 'ROLE_USER' };
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadUnreadCount = async () => {
+      if (!user?.token) {
+        if (isActive) {
+          setUnreadCount(0);
+        }
+        return;
+      }
+
+      try {
+        const payload = await notificationService.getUnreadCount(user.token);
+        if (isActive) {
+          setUnreadCount(payload.unreadCount ?? 0);
+        }
+      } catch {
+        if (isActive) {
+          setUnreadCount(0);
+        }
+      }
+    };
+
+    loadUnreadCount();
+
+    const refreshTimer = window.setInterval(loadUnreadCount, 30000);
+    const handleWindowFocus = () => {
+      loadUnreadCount();
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(refreshTimer);
+      window.removeEventListener('focus', handleWindowFocus);
+    };
+  }, [location.pathname, user?.token]);
 
   // Define menus conditionally based on role to satisfy the '4 Dashboards' requirement
   const getMenuItems = () => {
@@ -135,6 +178,51 @@ export default function DashboardLayout() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <ThemeToggle />
+
+            <NavLink
+              to="/dashboard/notifications"
+              style={({ isActive }) => ({
+                position: 'relative',
+                width: '42px',
+                height: '42px',
+                borderRadius: '50%',
+                border: isActive ? '1px solid rgba(96, 165, 250, 0.26)' : '1px solid var(--border-color)',
+                background: isActive ? 'var(--sidebar-active-bg)' : 'var(--bg-card)',
+                color: isActive ? 'var(--sidebar-active-text)' : 'var(--text-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textDecoration: 'none',
+                boxShadow: isActive ? '0 10px 24px rgba(37, 99, 235, 0.14)' : 'none',
+                transition: 'background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease'
+              })}
+              title="Notifications"
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    right: '-4px',
+                    minWidth: '20px',
+                    height: '20px',
+                    borderRadius: '999px',
+                    background: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: '0.72rem',
+                    fontWeight: '800',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 6px',
+                    boxShadow: '0 8px 18px rgba(239, 68, 68, 0.28)'
+                  }}
+                >
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </NavLink>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#3b82f6', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '600', fontSize: '1rem' }}>

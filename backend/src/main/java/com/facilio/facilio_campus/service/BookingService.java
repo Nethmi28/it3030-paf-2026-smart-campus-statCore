@@ -238,6 +238,79 @@ public class BookingService {
         return mapToDTO(cancelledBooking);
     }
 
+    @Transactional
+    public BookingResponseDTO verifyCheckIn(Long id, BookingCheckInRequestDTO request, String userEmail) {
+        if (request == null || request.getQrPayload() == null || request.getQrPayload().isBlank()) {
+            throw new IllegalArgumentException("QR check-in payload is required");
+        }
+
+        userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+
+        if (booking.getStatus() != BookingStatus.APPROVED) {
+            throw new IllegalArgumentException("Only approved bookings can be checked in");
+        }
+
+        if (Boolean.TRUE.equals(booking.getCheckedIn())) {
+            throw new IllegalArgumentException("This booking has already been checked in");
+        }
+
+        if (booking.getCheckInToken() == null || booking.getCheckInToken().isBlank()) {
+            throw new IllegalArgumentException("This booking does not have an active QR check-in code");
+        }
+
+        ParsedCheckInPayload parsedPayload = parseCheckInPayload(request.getQrPayload());
+        if (!booking.getId().equals(parsedPayload.bookingId())) {
+            throw new IllegalArgumentException("QR code does not match the selected booking");
+        }
+
+        if (!booking.getCheckInToken().equals(parsedPayload.token())) {
+            throw new IllegalArgumentException("QR code does not match the active booking token");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime bookingStart = LocalDateTime.of(booking.getBookingDate(), booking.getStartTime());
+        LocalDateTime bookingEnd = LocalDateTime.of(booking.getBookingDate(), booking.getEndTime());
+        LocalDateTime checkInOpensAt = bookingStart.minusMinutes(CHECK_IN_OPEN_BUFFER_MINUTES);
+
+        if (now.isBefore(checkInOpensAt)) {
+            throw new IllegalArgumentException(
+                    "Check-in opens only " + CHECK_IN_OPEN_BUFFER_MINUTES + " minutes before the booking start time"
+            );
+        }
+
+        if (now.isAfter(bookingEnd)) {
+            throw new IllegalArgumentException("Check-in is no longer available because this booking has already ended");
+        }
+
+        booking.setCheckedIn(true);
+        booking.setCheckedInAt(now);
+        booking.setCheckedInBy(userEmail);
+        Booking checkedInBooking = bookingRepository.save(booking);
+
+        recordAuditEvent(
+                checkedInBooking,
+                BookingAuditAction.CHECKED_IN,
+                userEmail,
+                "QR check-in verified for booking #" + checkedInBooking.getId()
+        );
+
+        notificationService.notifyUser(
+                checkedInBooking.getUser(),
+                "Booking check-in verified",
+                "Your booking for " + checkedInBooking.getResource().getName()
+                        + " on " + checkedInBooking.getBookingDate() + " has been checked in successfully.",
+                NotificationType.BOOKING,
+                NotificationPriority.LOW,
+                "Booking Management"
+        );
+
+        return mapToDTO(checkedInBooking);
+    }
+
     private String humanizeBookingStatus(BookingStatus status) {
         return status.name().replace('_', ' ');
     }
