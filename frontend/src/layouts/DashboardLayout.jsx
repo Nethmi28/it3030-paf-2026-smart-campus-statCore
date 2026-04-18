@@ -59,7 +59,6 @@ export default function DashboardLayout() {
     if (currentUser.role === 'ROLE_ADMIN') {
       return [
         { id: 'admin', label: 'Admin Panel', icon: <LayoutDashboard size={20} />, exact: true },
-        { id: 'admin/manage-resources', label: 'Manage Resources', icon: <Layers size={20} /> },
         { id: 'admin/registration-requests', label: 'New Registration Requests', icon: <UserPlus size={20} /> },
         { id: 'notifications', label: 'System Logs', icon: <Bell size={20} /> },
       ];
@@ -67,7 +66,7 @@ export default function DashboardLayout() {
     if (currentUser.role === 'ROLE_MANAGER') {
       return [
         { id: 'manager', label: 'Operations View', icon: <LayoutDashboard size={20} />, exact: true },
-        { id: 'resources', label: 'Facilities Catalog', icon: <Layers size={20} /> },
+        { id: 'manager/manage-resources', label: 'Manage Resources', icon: <Layers size={20} /> },
         { id: 'bookings', label: 'Review Bookings', icon: <CalendarDays size={20} /> },
         { id: 'tickets', label: 'Review Tickets', icon: <Ticket size={20} /> },
         { id: 'notifications', label: 'Notifications', icon: <Bell size={20} /> },

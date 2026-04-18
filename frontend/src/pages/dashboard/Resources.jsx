@@ -19,8 +19,10 @@ export default function Resources() {
   const [error, setError] = useState(null);
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedFaculty, setSelectedFaculty] = useState('All Faculties');
   const [selectedCapacity, setSelectedCapacity] = useState('All Capacities');
+  const [filters, setFilters] = useState({ status: 'All', type: 'All' });
   const [viewMode, setViewMode] = useState(user?.role === 'ROLE_MANAGER' ? 'analysis' : 'overview');
 
   // Pre-calculate faculty counts
@@ -69,10 +71,32 @@ export default function Resources() {
     }
   };
 
+  const uniqueTypes = ['All', ...new Set(resources.map(r => r.type))];
+
   const filteredResources = resources.filter(resource => {
-    return resource.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-           resource.location.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = resource.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         resource.location.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = filters.status === 'All' || 
+                         (filters.status === 'Available' ? resource.status === 'Available' : resource.status === filters.status);
+    
+    const matchesType = filters.type === 'All' || resource.type === filters.type;
+
+    return matchesSearch && matchesStatus && matchesType;
   });
+
+  const filterSelectStyle = {
+    padding: '12px 16px',
+    borderRadius: '12px',
+    border: '1px solid var(--border-color)',
+    background: 'var(--bg-card)',
+    color: 'var(--text-primary)',
+    fontSize: '0.9rem',
+    width: '100%',
+    cursor: 'pointer',
+    outline: 'none',
+    fontWeight: '600'
+  };
 
   return (
     <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', gap: '32px', minHeight: '100vh' }}>
@@ -211,7 +235,7 @@ export default function Resources() {
             display: 'flex', 
             flexDirection: 'column',
             gap: '16px', 
-            padding: '32px',
+            padding: '24px',
             background: 'var(--bg-card)',
             borderRadius: '24px',
             boxShadow: 'var(--shadow)',
@@ -220,9 +244,9 @@ export default function Resources() {
             top: '0',
             zIndex: 10
           }}>
-            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', flexGrow: 1, position: 'relative' }}>
-                <Search size={22} style={{ position: 'absolute', left: '18px', color: 'var(--text-muted)' }} />
+                <Search size={20} style={{ position: 'absolute', left: '16px', color: 'var(--text-muted)' }} />
                 <input 
                   type="text" 
                   placeholder="Find a specific room or lab..."
@@ -230,29 +254,28 @@ export default function Resources() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '16px 16px 16px 54px',
+                    padding: '14px 16px 14px 48px',
                     borderRadius: '16px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-alt)',
-                    fontSize: '1rem',
+                    fontSize: '0.95rem',
                     color: 'var(--text-primary)',
-                    outline: 'none',
-                    transition: 'border-color 0.2s'
+                    outline: 'none'
                   }}
                 />
               </div>
 
-              <div style={{ position: 'relative', width: '220px' }}>
+              <div style={{ position: 'relative', width: '200px' }}>
                 <select 
                   value={selectedCapacity}
                   onChange={(e) => setSelectedCapacity(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '16px 20px',
+                    padding: '14px 16px',
                     borderRadius: '16px',
                     border: '1px solid var(--border-color)',
                     background: 'var(--bg-alt)',
-                    fontSize: '0.95rem',
+                    fontSize: '0.9rem',
                     color: 'var(--text-primary)',
                     appearance: 'none',
                     cursor: 'pointer',
@@ -265,9 +288,102 @@ export default function Resources() {
                     <option key={cap} value={cap}>{cap}+ People</option>
                   ))}
                 </select>
-                <ChevronDown size={18} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }} />
+                <ChevronDown size={16} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-muted)' }} />
               </div>
+
+              <button 
+                onClick={() => setShowFilters(!showFilters)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '14px 20px',
+                  borderRadius: '16px',
+                  border: '1px solid',
+                  borderColor: showFilters ? 'var(--accent)' : 'var(--border-color)',
+                  background: showFilters ? 'var(--bg-alt)' : 'var(--bg-card)',
+                  color: showFilters ? 'var(--accent)' : 'var(--text-primary)',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Filter size={18} />
+                Filters
+              </button>
             </div>
+
+            {showFilters && (
+              <div style={{ 
+                marginTop: '16px',
+                padding: '24px', 
+                background: 'var(--bg-alt)', 
+                borderRadius: '16px',
+                border: '1px solid var(--border-color)',
+                animation: 'slideDown 0.3s ease-out'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h4 style={{ fontWeight: '700', fontSize: '0.95rem' }}>Advanced Filters</h4>
+                  <button 
+                    onClick={() => setShowFilters(false)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '700' }}
+                  >
+                    Close
+                  </button>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status</label>
+                    <select 
+                      value={filters.status}
+                      onChange={(e) => setFilters({...filters, status: e.target.value})}
+                      style={filterSelectStyle}
+                    >
+                      <option value="All">All Status</option>
+                      <option value="Available">Available Only</option>
+                      <option value="Maintenance">Under Maintenance</option>
+                      <option value="Unavailable">Unavailable</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Facility Type</label>
+                    <select 
+                      value={filters.type}
+                      onChange={(e) => setFilters({...filters, type: e.target.value})}
+                      style={filterSelectStyle}
+                    >
+                      {uniqueTypes.map(type => (
+                        <option key={type} value={type}>{type === 'All' ? 'All Types' : type.replace('_', ' ')}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                  <button 
+                    onClick={() => setFilters({ status: 'All', type: 'All' })}
+                    style={{ 
+                      padding: '10px 20px', borderRadius: '10px', background: 'transparent', 
+                      border: '1px solid var(--border-color)', color: 'var(--text-primary)',
+                      fontWeight: '600', cursor: 'pointer'
+                    }}
+                  >
+                    Reset
+                  </button>
+                  <button 
+                    onClick={() => setShowFilters(false)}
+                    style={{ 
+                      padding: '10px 32px', borderRadius: '10px', background: 'var(--accent)', 
+                      border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer'
+                    }}
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {loading ? (

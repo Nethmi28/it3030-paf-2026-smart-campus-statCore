@@ -71,7 +71,7 @@ export default function ResourceDetails() {
         <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Error Loading Resource</h2>
         <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>{error || 'The resource could not be found.'}</p>
         <button
-          onClick={() => navigate('/dashboard/resources')}
+          onClick={() => navigate(location.pathname.startsWith('/dashboard') ? '/dashboard/resources' : '/resources')}
           style={{ padding: '12px 24px', borderRadius: '10px', background: 'var(--accent)', color: 'white', border: 'none', fontWeight: '600', cursor: 'pointer' }}
         >
           Go Back to Resources

@@ -203,6 +203,14 @@ export default function ResourceFormModal({ isOpen, onClose, onSave, resource, l
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Strict numeric validation for capacity
+    if (name === 'capacity') {
+      const numericValue = value.replace(/\D/g, '');
+      setFormData(prev => ({ ...prev, [name]: numericValue }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -330,12 +338,13 @@ export default function ResourceFormModal({ isOpen, onClose, onSave, resource, l
                 <div style={{ position: 'relative' }}>
                   <Users size={16} style={{ position: 'absolute', left: '12px', top: '14px', color: 'var(--text-muted)' }} />
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     name="capacity"
                     value={formData.capacity}
                     onChange={handleChange}
+                    placeholder="0"
                     required
-                    min="0"
                     style={{ ...modalStyles.input, paddingLeft: '40px' }}
                   />
                 </div>
