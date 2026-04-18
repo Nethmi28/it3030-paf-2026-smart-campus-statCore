@@ -34,7 +34,7 @@ export default function TicketUserView() {
   // Apply local filters for ALL roles
   const applyLocalFilters = (tickets) => {
     let filtered = [...tickets];
-    
+
     if (filters.status) {
       filtered = filtered.filter(t => t.status === filters.status);
     }
@@ -42,11 +42,11 @@ export default function TicketUserView() {
       filtered = filtered.filter(t => t.priority === filters.priority);
     }
     if (filters.category) {
-      filtered = filtered.filter(t => 
+      filtered = filtered.filter(t =>
         t.category?.toLowerCase().includes(filters.category.toLowerCase())
       );
     }
-    
+
     return filtered;
   };
 
@@ -96,7 +96,7 @@ export default function TicketUserView() {
     if (viewMode === 'my') tickets = myTickets;
     else if (viewMode === 'assigned') tickets = assignedTickets;
     else tickets = allTickets;
-    
+
     // Apply local filters for ALL roles when filters are active
     if (hasActiveFilters) {
       return applyLocalFilters(tickets);
@@ -177,7 +177,7 @@ export default function TicketUserView() {
       }}>
         {statCards.map((stat, idx) => (
           <div key={idx} style={{
-            background: 'var(--bg-card)',
+            background: 'var(--ticket-summary-bg)',
             borderRadius: '16px',
             padding: '20px',
             display: 'flex',
@@ -282,7 +282,7 @@ export default function TicketUserView() {
 
           {isAdminOrManager && (
             <>
-            
+
               <button
                 onClick={() => {
                   setViewMode('all');
@@ -431,7 +431,7 @@ export default function TicketUserView() {
               Close
             </button>
           </div>
-          
+
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ flex: 1, minWidth: '150px' }}>
               <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>STATUS</label>
@@ -478,7 +478,7 @@ export default function TicketUserView() {
               </select>
             </div>
           </div>
-          
+
           <div style={{ marginTop: '16px', textAlign: 'right' }}>
             <button
               onClick={() => setShowFilters(false)}
@@ -543,9 +543,9 @@ export default function TicketUserView() {
                   <p style={{ fontSize: '1.1rem', marginBottom: '8px' }}>No tickets found</p>
                   <p style={{ fontSize: '0.875rem' }}>
                     {hasActiveFilters ? 'Try clearing your filters to see more tickets.' :
-                      (isStudent ? 'Click "Create Ticket" to report an issue.' : 
-                       isTechnician ? 'No tickets have been assigned to you yet.' : 
-                       'No tickets have been submitted yet.')}
+                      (isStudent ? 'Click "Create Ticket" to report an issue.' :
+                        isTechnician ? 'No tickets have been assigned to you yet.' :
+                          'No tickets have been submitted yet.')}
                   </p>
                 </div>
               ) : (
@@ -590,7 +590,7 @@ export default function TicketUserView() {
                           padding: '4px 10px',
                           background: statusConfig.bg,
                           color: statusConfig.text,
-                          borderRadius: '20px',
+                          borderRadius: '8px',
                           fontSize: '0.75rem',
                           fontWeight: '600'
                         }}>
@@ -605,7 +605,7 @@ export default function TicketUserView() {
                           padding: '4px 10px',
                           background: priorityConfig.bg,
                           color: priorityConfig.text,
-                          borderRadius: '20px',
+                          borderRadius: '8px',
                           fontSize: '0.75rem',
                           fontWeight: '600'
                         }}>

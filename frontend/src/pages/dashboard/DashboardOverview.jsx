@@ -43,7 +43,7 @@ export default function DashboardOverview() {
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case 'APPROVED': 
+      case 'APPROVED':
       case 'ACCEPTED': return { bg: '#dcfce7', text: '#22c55e' };
       case 'PENDING': return { bg: '#fef08a', text: '#eab308' };
       case 'REJECTED': return { bg: '#fee2e2', text: '#ef4444' };
@@ -56,12 +56,12 @@ export default function DashboardOverview() {
   };
 
   if (loading) {
-     return (
-       <div style={{ padding: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-         <Loader2 size={40} className="animate-spin" style={{ color: '#3b82f6' }} />
-         <p style={{ color: 'var(--text-muted)' }}>Loading Activity...</p>
-       </div>
-     );
+    return (
+      <div style={{ padding: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+        <Loader2 size={40} className="animate-spin" style={{ color: '#3b82f6' }} />
+        <p style={{ color: 'var(--text-muted)' }}>Loading Activity...</p>
+      </div>
+    );
   }
 
   return (
@@ -74,8 +74,8 @@ export default function DashboardOverview() {
       {/* Stats Cards */}
       <div style={{ display: 'flex', gap: '24px' }}>
         {/* Card 1 */}
-        <div style={{ 
-          background: 'var(--bg-card)', padding: '24px', borderRadius: '12px', 
+        <div style={{
+          background: 'var(--bg-card)', padding: '24px', borderRadius: '12px',
           flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
         }}>
@@ -89,8 +89,8 @@ export default function DashboardOverview() {
         </div>
 
         {/* Card 2 */}
-        <div style={{ 
-          background: 'var(--bg-card)', padding: '24px', borderRadius: '12px', 
+        <div style={{
+          background: 'var(--bg-card)', padding: '24px', borderRadius: '12px',
           flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
         }}>
@@ -104,8 +104,8 @@ export default function DashboardOverview() {
         </div>
 
         {/* Card 3 */}
-        <div style={{ 
-          background: 'var(--bg-card)', padding: '24px', borderRadius: '12px', 
+        <div style={{
+          background: 'var(--bg-card)', padding: '24px', borderRadius: '12px',
           flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
         }}>
@@ -121,25 +121,25 @@ export default function DashboardOverview() {
 
       {/* Tables Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-        
+
         {/* Recent Bookings */}
-        <div style={{ 
+        <div style={{
           background: 'var(--bg-card)', borderRadius: '12px', padding: '24px',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
         }}>
           <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px' }}>Recent Bookings</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {recentBookings.map(item => (
-              <div key={item.id} style={{ 
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+              <div key={item.id} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '16px', background: 'var(--bg-icon)', borderRadius: '8px'
               }}>
                 <div>
                   <div style={{ fontWeight: '500', fontSize: '0.9rem', marginBottom: '4px' }}>{item.resourceName}</div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{item.bookingDate} · {item.startTime}-{item.endTime}</div>
                 </div>
-                <div style={{ 
-                  background: getStatusStyle(item.status).bg, 
+                <div style={{
+                  background: getStatusStyle(item.status).bg,
                   color: getStatusStyle(item.status).text,
                   padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600'
                 }}>
@@ -151,23 +151,23 @@ export default function DashboardOverview() {
         </div>
 
         {/* Recent Tickets */}
-        <div style={{ 
+        <div style={{
           background: 'var(--bg-card)', borderRadius: '12px', padding: '24px',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)'
         }}>
           <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '16px' }}>Recent Tickets</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {recentTickets.map(item => (
-              <div key={item.id} style={{ 
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+              <div key={item.id} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '16px', background: 'var(--bg-icon)', borderRadius: '8px'
               }}>
                 <div>
                   <div style={{ fontWeight: '500', fontSize: '0.9rem', marginBottom: '4px' }}>{item.category}: {item.description.substring(0, 30)}...</div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>ID: #{item.id} · {item.priority} Priority</div>
                 </div>
-                <div style={{ 
-                  background: getStatusStyle(item.status).bg, 
+                <div style={{
+                  background: getStatusStyle(item.status).bg,
                   color: getStatusStyle(item.status).text,
                   padding: '4px 12px', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '600'
                 }}>
@@ -177,7 +177,7 @@ export default function DashboardOverview() {
             ))}
           </div>
         </div>
-        
+
       </div>
     </div>
   );
