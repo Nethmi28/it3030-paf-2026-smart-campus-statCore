@@ -26,10 +26,9 @@ export function StudentBookingsView() {
   const [myBookings, setMyBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [bookingError, setBookingError] = useState('');
-<<<<<<< HEAD
-  const [qrBooking, setQrBooking] = useState(null);
 =======
->>>>>>> 2b9eaa12b2e4209a0d02ff722070e0718e530a30
+  const [qrBooking, setQrBooking] = useState(null);
+
 
   // Availability check
   const [conflicts, setConflicts] = useState([]);
@@ -134,6 +133,10 @@ export function StudentBookingsView() {
   const effectiveDurationHours = isAuditorium ? durationHours : 2;
   const attendeeLimit = selectedResource?.capacity ?? null;
   const lastBookingErrorMessage = `Bookings must end by ${formatBookingTime(BOOKING_DAY_END_TIME)}. The last booking period is ${LAST_BOOKING_SLOT_LABEL}.`;
+  const todayDateString = formatDateInputValue(new Date());
+  const maxBookingDateString = formatDateInputValue(addMonthsToDate(new Date(), 3));
+  const currentTimeString = formatTimeInputValue(new Date());
+  const isBookingDateToday = formData.date === todayDateString;
 
   // Fetch availability when date changes
   useEffect(() => {
@@ -202,6 +205,25 @@ export function StudentBookingsView() {
     () => isOutsideBookingWindow(formData.endTime),
     [formData.endTime]
   );
+
+  const isDateOutsideAllowedRange = useMemo(() => {
+    if (!formData.date) {
+      return false;
+    }
+
+    return formData.date < todayDateString || formData.date > maxBookingDateString;
+  }, [formData.date, maxBookingDateString, todayDateString]);
+
+  const hasPastTimeSelection = useMemo(() => {
+    if (!isBookingDateToday || !formData.startTime) {
+      return false;
+    }
+
+    const selectedMinutes = toMinutes(formData.startTime);
+    const currentMinutes = toMinutes(currentTimeString);
+
+    return selectedMinutes !== null && currentMinutes !== null && selectedMinutes < currentMinutes;
+  }, [currentTimeString, formData.startTime, isBookingDateToday]);
 
   const qrImageUrl = useMemo(
     () => qrBooking?.checkInPayload
@@ -273,6 +295,42 @@ export function StudentBookingsView() {
       return;
     }
 
+    if (name === 'date') {
+      setFormData(prev => {
+        const selectedMinutes = toMinutes(prev.startTime);
+        const currentMinutes = toMinutes(currentTimeString);
+        const shouldResetTimeSelection =
+          value === todayDateString &&
+          selectedMinutes !== null &&
+          currentMinutes !== null &&
+          selectedMinutes < currentMinutes;
+
+        return {
+          ...prev,
+          date: value,
+          startTime: shouldResetTimeSelection ? '' : prev.startTime,
+          endTime: shouldResetTimeSelection ? '' : prev.endTime,
+        };
+      });
+      return;
+    }
+
+    if (name === 'startTime') {
+      const selectedMinutes = toMinutes(value);
+      const currentMinutes = toMinutes(currentTimeString);
+
+      if (
+        isBookingDateToday &&
+        value &&
+        selectedMinutes !== null &&
+        currentMinutes !== null &&
+        selectedMinutes < currentMinutes
+      ) {
+        setFormData(prev => ({ ...prev, startTime: '', endTime: '' }));
+        return;
+      }
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -284,6 +342,22 @@ export function StudentBookingsView() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isDateOutsideAllowedRange) {
+      showToast({
+        variant: 'warning',
+        title: 'Invalid Booking Date',
+        message: `Bookings can only be made from ${todayDateString} through ${maxBookingDateString}.`,
+      });
+      return;
+    }
+    if (hasPastTimeSelection) {
+      showToast({
+        variant: 'warning',
+        title: 'Invalid Start Time',
+        message: 'For today, please choose the current time or a future time slot.',
+      });
+      return;
+    }
     if (hasLateTimeSelection) {
       showToast({
         variant: 'warning',
@@ -563,9 +637,15 @@ export function StudentBookingsView() {
                     name="date"
                     value={formData.date}
                     onChange={handleInputChange}
+                    min={todayDateString}
+                    max={maxBookingDateString}
                     required
                     style={inputStyle}
                   />
+                </div>
+
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  Booking dates are available from {todayDateString} to {maxBookingDateString}.
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
@@ -575,6 +655,7 @@ export function StudentBookingsView() {
                     name="startTime"
                     value={formData.startTime}
                     onChange={handleInputChange}
+                    min={isBookingDateToday ? currentTimeString : undefined}
                     required
                     style={inputStyle}
                   />
@@ -627,6 +708,20 @@ export function StudentBookingsView() {
                   <div style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.35)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
                     <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
                     <span>{lastBookingErrorMessage}</span>
+                  </div>
+                )}
+
+                {isDateOutsideAllowedRange && (
+                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
+                    <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <span>Please choose a booking date between {todayDateString} and {maxBookingDateString}.</span>
+                  </div>
+                )}
+
+                {hasPastTimeSelection && (
+                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
+                    <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <span>For today&apos;s bookings, start time must be the current time or later.</span>
                   </div>
                 )}
 
@@ -701,7 +796,7 @@ export function StudentBookingsView() {
                   </div>
 
                   {(() => {
-                    const isDisabled = hasConflict || hasLateTimeSelection || !formData.date || !formData.startTime || !formData.resourceId || !formData.expectedAttendees || !formData.purpose || (isAuditorium && !file);
+                    const isDisabled = hasConflict || hasLateTimeSelection || hasPastTimeSelection || isDateOutsideAllowedRange || !formData.date || !formData.startTime || !formData.resourceId || !formData.expectedAttendees || !formData.purpose || (isAuditorium && !file);
                     return (
                       <button
                         type="submit"
