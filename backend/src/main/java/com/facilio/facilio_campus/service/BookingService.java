@@ -5,6 +5,9 @@ import com.facilio.facilio_campus.dto.BookingResponseDTO;
 import com.facilio.facilio_campus.dto.BookingStatusUpdateDTO;
 import com.facilio.facilio_campus.model.Booking;
 import com.facilio.facilio_campus.model.BookingStatus;
+import com.facilio.facilio_campus.model.NotificationPriority;
+import com.facilio.facilio_campus.model.NotificationType;
+import com.facilio.facilio_campus.model.Role;
 import com.facilio.facilio_campus.model.Resource;
 import com.facilio.facilio_campus.model.User;
 import com.facilio.facilio_campus.repository.BookingRepository;
@@ -37,6 +40,9 @@ public class BookingService {
 
     @Autowired
     private ResourceRepository resourceRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     private final String UPLOAD_DIR = "uploads/bookings/";
 
@@ -88,6 +94,17 @@ public class BookingService {
         }
 
         Booking savedBooking = bookingRepository.save(booking);
+        notificationService.notifyRoles(
+                List.of(Role.ROLE_MANAGER, Role.ROLE_ADMIN),
+                "New booking request submitted",
+                user.getName() + " requested " + resource.getName()
+                        + " for " + request.getBookingDate()
+                        + " from " + request.getStartTime()
+                        + " to " + request.getEndTime() + ".",
+                NotificationType.BOOKING,
+                NotificationPriority.MEDIUM,
+                "Booking Management"
+        );
         return mapToDTO(savedBooking);
     }
 
@@ -125,7 +142,21 @@ public class BookingService {
             booking.setAdminReason(updateDTO.getAdminReason());
         }
         
-        return mapToDTO(bookingRepository.save(booking));
+        Booking updatedBooking = bookingRepository.save(booking);
+        notificationService.notifyUser(
+                updatedBooking.getUser(),
+                "Booking " + humanizeBookingStatus(updatedBooking.getStatus()),
+                "Your booking for " + updatedBooking.getResource().getName()
+                        + " on " + updatedBooking.getBookingDate()
+                        + " is now " + humanizeBookingStatus(updatedBooking.getStatus()).toLowerCase()
+                        + formatAdminReason(updatedBooking.getAdminReason()),
+                NotificationType.BOOKING,
+                updatedBooking.getStatus() == BookingStatus.REJECTED
+                        ? NotificationPriority.HIGH
+                        : NotificationPriority.MEDIUM,
+                "Booking Management"
+        );
+        return mapToDTO(updatedBooking);
     }
 
     @Transactional
@@ -142,7 +173,30 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
-        return mapToDTO(bookingRepository.save(booking));
+        Booking cancelledBooking = bookingRepository.save(booking);
+        notificationService.notifyRoles(
+                List.of(Role.ROLE_MANAGER, Role.ROLE_ADMIN),
+                "Booking cancelled",
+                booking.getUser().getName() + " cancelled the booking for "
+                        + booking.getResource().getName()
+                        + " on " + booking.getBookingDate() + ".",
+                NotificationType.BOOKING,
+                NotificationPriority.LOW,
+                "Booking Management"
+        );
+        return mapToDTO(cancelledBooking);
+    }
+
+    private String humanizeBookingStatus(BookingStatus status) {
+        return status.name().replace('_', ' ');
+    }
+
+    private String formatAdminReason(String adminReason) {
+        if (adminReason == null || adminReason.isBlank()) {
+            return ".";
+        }
+
+        return ". Reason: " + adminReason;
     }
 
     private BookingResponseDTO mapToDTO(Booking booking) {

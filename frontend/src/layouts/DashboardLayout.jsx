@@ -34,6 +34,7 @@ export default function DashboardLayout() {
       return [
         { id: 'tech', label: 'Job Queue', icon: <LayoutDashboard size={20} />, exact: true },
         { id: 'tickets', label: 'Incident Tickets', icon: <Ticket size={20} /> },
+        { id: 'notifications', label: 'Work Alerts', icon: <Bell size={20} /> },
       ];
     }
     // Default: ROLE_STUDENT
