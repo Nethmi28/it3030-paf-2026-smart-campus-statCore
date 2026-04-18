@@ -90,10 +90,15 @@ export default function ProfileDetails() {
   ), [currentUser.name, form.address, form.name, form.phoneNumber, profile]);
 
   const handleFieldChange = (field) => (event) => {
+    const nextValue = field === 'phoneNumber'
+      ? event.target.value.replace(/\D/g, '').slice(0, 10)
+      : event.target.value;
+
     setForm((current) => ({
       ...current,
-      [field]: event.target.value
+      [field]: nextValue
     }));
+    setError('');
     setSuccess('');
   };
 
@@ -106,6 +111,14 @@ export default function ProfileDetails() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    const trimmedPhoneNumber = form.phoneNumber.trim();
+
+    if (trimmedPhoneNumber && !/^\d{10}$/.test(trimmedPhoneNumber)) {
+      setError('Phone number must contain exactly 10 digits.');
+      setSuccess('');
+      return;
+    }
+
     try {
       setSaving(true);
       setError('');
@@ -113,7 +126,7 @@ export default function ProfileDetails() {
 
       const payload = await profileService.updateMyProfile(currentUser.token, {
         name: form.name.trim(),
-        phoneNumber: form.phoneNumber.trim(),
+        phoneNumber: trimmedPhoneNumber,
         address: form.address.trim()
       });
 
@@ -318,7 +331,9 @@ export default function ProfileDetails() {
                 value={form.phoneNumber}
                 onChange={handleFieldChange('phoneNumber')}
                 disabled={loading || saving}
-                placeholder="Add your phone number"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="Enter 10-digit phone number"
                 style={{
                   height: '52px',
                   borderRadius: '14px',

@@ -117,8 +117,8 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Enter a valid email address.");
         }
 
-        if (!googleEmail.isBlank() && !googleEmail.contains("@")) {
-            return ResponseEntity.badRequest().body("Enter a valid Google sign-in email address.");
+        if (!googleEmail.isBlank() && !isValidGmailAddress(googleEmail)) {
+            return ResponseEntity.badRequest().body("Enter a valid Gmail address for Google sign-in.");
         }
 
         if (!isValidRequestedPassword(password)) {
@@ -404,6 +404,10 @@ public class AuthController {
 
     private String normalizeOptionalEmail(String value) {
         return safeTrim(value).toLowerCase();
+    }
+
+    private boolean isValidGmailAddress(String email) {
+        return email != null && email.matches("^[A-Za-z0-9._%+-]+@gmail\\.com$");
     }
 
     private AuthResponse buildAuthResponse(CustomUserDetails userDetails) {

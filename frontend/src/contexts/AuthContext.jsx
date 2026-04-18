@@ -5,7 +5,7 @@ import {
   getStoredCampusUser,
   isSupportedCampusRole,
   persistCampusUser,
-  resolveCampusCredentials
+  resolveCampusLoginIdentifier
 } from '../utils/campusAuth';
 
 const AuthContext = createContext();
@@ -64,22 +64,22 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (username, password) => {
-    const resolvedCredentials = resolveCampusCredentials(username, password);
-    const useDemoAccount = resolvedCredentials.success;
-    const loginEmail = useDemoAccount
-      ? resolvedCredentials.account.email
-      : username.trim().toLowerCase();
-    const loginPassword = useDemoAccount
-      ? resolvedCredentials.account.password
-      : password;
+    const resolvedIdentifier = resolveCampusLoginIdentifier(username);
+
+    if (!resolvedIdentifier.success) {
+      return {
+        success: false,
+        error: resolvedIdentifier.error
+      };
+    }
 
     try {
       const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: loginEmail,
-          password: loginPassword
+          email: resolvedIdentifier.email,
+          password
         })
       });
 
@@ -89,11 +89,6 @@ export const AuthProvider = ({ children }) => {
       }
 
       const data = await response.json();
-
-      if (useDemoAccount && data.role !== resolvedCredentials.account.role) {
-        clearStoredCampusUser();
-        throw new Error('This campus account is linked to a different role.');
-      }
 
       if (!isSupportedCampusRole(data.role)) {
         clearStoredCampusUser();
@@ -106,9 +101,7 @@ export const AuthProvider = ({ children }) => {
         success: false,
         error:
           error.message === 'Login failed' || error.message === 'Invalid email or password.'
-            ? useDemoAccount
-              ? 'Unable to sign in with this campus account right now.'
-              : 'Unable to sign in with this email and password.'
+            ? 'Unable to sign in with this campus email/ID and password.'
             : error.message
       };
     }
