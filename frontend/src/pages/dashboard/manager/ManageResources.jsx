@@ -299,10 +299,26 @@ export default function ManageResources() {
     return matchesSearch && matchesStatus && matchesType && matchesFaculty;
   });
 
-  const getImageUrl = (url, type) => {
+  const getImageUrl = (url, type, name) => {
     if (!url) {
+      const lowerName = name?.toLowerCase() || '';
       if (type === 'TRANSPORTATION') {
         return 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=400';
+      }
+      if (lowerName.includes('basketball')) {
+        return 'https://images.unsplash.com/photo-1519861531473-9200262188bf?auto=format&fit=crop&q=80&w=400';
+      }
+      if (lowerName.includes('volleyball')) {
+        return 'https://images.unsplash.com/photo-1592656094267-764a45159577?auto=format&fit=crop&q=80&w=400';
+      }
+      if (lowerName.includes('carrom')) {
+        return 'https://images.unsplash.com/photo-1577748651212-32abb372993d?auto=format&fit=crop&q=80&w=400';
+      }
+      if (lowerName.includes('chess')) {
+        return 'https://images.unsplash.com/photo-1528819622765-d6bcf132f793?auto=format&fit=crop&q=80&w=400';
+      }
+      if (lowerName.includes('badminton')) {
+        return 'https://images.unsplash.com/photo-1521537634581-0dced2fee2ef?auto=format&fit=crop&q=80&w=400';
       }
       return 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=400';
     }
@@ -498,10 +514,10 @@ export default function ManageResources() {
                           }}
                           onMouseEnter={() => setHoveredId(res.id)}
                           onMouseLeave={() => setHoveredId(null)}
-                          onClick={() => setPreviewImage(getImageUrl(res.imageUrl, res.type))}
+                          onClick={() => setPreviewImage(getImageUrl(res.imageUrl, res.type, res.name))}
                         >
                           <img 
-                            src={getImageUrl(res.imageUrl, res.type)} 
+                            src={getImageUrl(res.imageUrl, res.type, res.name)} 
                             alt={res.name}
                             style={{
                               ...styles.thumbnailImg,
@@ -509,7 +525,7 @@ export default function ManageResources() {
                             }}
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = getImageUrl(null, res.type);
+                              e.target.src = getImageUrl(null, res.type, res.name);
                             }}
                           />
                         </div>

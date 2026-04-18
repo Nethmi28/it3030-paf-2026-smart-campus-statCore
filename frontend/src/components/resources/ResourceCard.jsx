@@ -9,8 +9,24 @@ const ResourceCard = ({ resource }) => {
 
   const getImageUrl = (url) => {
     if (!url) {
+      const name = resource.name.toLowerCase();
       if (resource.type === 'TRANSPORTATION') {
         return 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=800';
+      }
+      if (name.includes('basketball')) {
+        return 'https://images.unsplash.com/photo-1519861531473-9200262188bf?auto=format&fit=crop&q=80&w=800';
+      }
+      if (name.includes('volleyball')) {
+        return 'https://images.unsplash.com/photo-1592656094267-764a45159577?auto=format&fit=crop&q=80&w=800';
+      }
+      if (name.includes('carrom')) {
+        return 'https://images.unsplash.com/photo-1577748651212-32abb372993d?auto=format&fit=crop&q=80&w=800';
+      }
+      if (name.includes('chess')) {
+        return 'https://images.unsplash.com/photo-1528819622765-d6bcf132f793?auto=format&fit=crop&q=80&w=800';
+      }
+      if (name.includes('badminton')) {
+        return 'https://images.unsplash.com/photo-1521537634581-0dced2fee2ef?auto=format&fit=crop&q=80&w=800';
       }
       return 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800';
     }
