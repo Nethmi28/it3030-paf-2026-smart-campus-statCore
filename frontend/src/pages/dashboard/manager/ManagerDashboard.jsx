@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Building2, CalendarClock, ShieldAlert, BellRing,
-  Loader2, ArrowRight, Activity, Layers,
-  ClipboardList, Wrench, PieChart
+  CalendarClock, BellRing, Loader2, ArrowRight, Activity, Layers, Wrench
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { bookingService } from '../../../services/bookingService';

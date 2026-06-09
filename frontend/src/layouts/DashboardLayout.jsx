@@ -96,14 +96,22 @@ export default function DashboardLayout() {
 
       {/* Sidebar - Only shown for registered users */}
       {user && (
-        <div style={{ width: '260px', backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-color)' }}>
+        <div style={{ width: '260px', backgroundColor: 'var(--sidebar-bg, #f6f5f2)', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-color)' }}>
           <div style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid var(--border-color)' }}>
-            <div style={{ background: '#3b82f6', color: 'white', padding: '8px', borderRadius: '8px', display: 'flex' }}>
-              <School size={24} />
+            <div style={{ background: '#2563eb', color: 'white', padding: '10px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <School size={22} />
             </div>
             <div>
-              <div style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '1rem' }}>Facilio Hub</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{currentUser.role.replace('ROLE_', '')} PORTAL</div>
+              <div style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '1.05rem', letterSpacing: '-0.02em' }}>Facilio Hub</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                {currentUser.role === 'ROLE_STUDENT'
+                  ? 'Student Portal'
+                  : currentUser.role === 'ROLE_MANAGER'
+                  ? 'Manager Portal'
+                  : currentUser.role === 'ROLE_ADMIN'
+                  ? 'Admin Portal'
+                  : currentUser.role.replace('ROLE_', '') + ' Portal'}
+              </div>
             </div>
           </div>
 
@@ -117,17 +125,17 @@ export default function DashboardLayout() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
-                  padding: '14px 16px',
+                  padding: '12px 16px',
                   width: '100%',
-                  background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
-                  color: isActive ? 'var(--sidebar-active-text)' : 'var(--text-muted)',
-                  border: isActive ? '1px solid var(--sidebar-active-border)' : '1px solid transparent',
-                  borderRadius: '12px',
+                  background: isActive ? 'var(--sidebar-active-bg, rgba(37, 99, 235, 0.08))' : 'transparent',
+                  color: isActive ? 'var(--sidebar-active-text, #2563eb)' : 'var(--text-muted)',
+                  border: 'none',
+                  borderRadius: '10px',
                   cursor: 'pointer',
                   textAlign: 'left',
                   fontWeight: isActive ? '600' : '500',
-                  boxShadow: isActive ? '0 12px 24px rgba(37, 99, 235, 0.14)' : 'none',
-                  transition: 'background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+                  boxShadow: 'none',
+                  transition: 'background 0.2s ease, color 0.2s ease',
                   textDecoration: 'none'
                 })}
               >
@@ -146,8 +154,8 @@ export default function DashboardLayout() {
                 alignItems: 'center',
                 gap: '12px',
                 width: '100%',
-                padding: '14px 16px',
-                borderRadius: '12px',
+                padding: '12px 16px',
+                borderRadius: '10px',
                 border: 'none',
                 background: 'transparent',
                 color: '#ef4444',
