@@ -345,9 +345,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0b1120', padding: '0px' }}>
-      <div style={{ width: '100%', maxWidth: '1480px', minHeight: 'calc(100vh - 40px)', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', background: '#121a2b', borderRadius: '0px', overflow: 'hidden', border: '1px solid rgba(148, 163, 184, 0.12)', boxShadow: '0 30px 60px rgba(2, 6, 23, 0.45)' }}>
-        <div style={{ position: 'relative', minHeight: '440px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '32px', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: '#121a2b', padding: '0px' }}>
+      <div style={{ width: '100%', minHeight: '100vh', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', background: '#121a2b', borderRadius: '0px', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', minHeight: '440px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px clamp(24px, 4vw, 56px)', overflow: 'hidden' }}>
           {LOGIN_SLIDES.map((slide, slideIndex) => (
             <div
               key={slide.image}

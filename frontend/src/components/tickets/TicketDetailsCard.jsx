@@ -8,6 +8,8 @@ import {
 import { ticketService } from '../../services/ticketService';
 import { useAuth } from '../../contexts/AuthContext';
 
+const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8089';
+
 const AuthenticatedImage = ({ name, id }) => {
     const [imgSrc, setImgSrc] = useState(null);
     const [error, setError] = useState(false);
@@ -18,7 +20,7 @@ const AuthenticatedImage = ({ name, id }) => {
             setLoading(true);
             try {
                 const token = localStorage.getItem('token');
-                const response = await fetch(`http://localhost:8089/api/tickets/attachments/${id}`, {
+                const response = await fetch(`${API_BASE}/api/tickets/attachments/${id}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (response.ok) {
@@ -834,7 +836,7 @@ const getSLAStatus = (createdAt, status, resolvedAt) => {
                                         return isImage ? (
                                             <AuthenticatedImage key={index} id={id} name={name} />
                                         ) : (
-                                            <a href={`http://localhost:8089/api/tickets/attachments/${id}`} target="_blank" rel="noreferrer" key={index} style={{ textDecoration: 'none' }}>
+                                            <a href={`${API_BASE}/api/tickets/attachments/${id}`} target="_blank" rel="noreferrer" key={index} style={{ textDecoration: 'none' }}>
                                                 <div style={{
                                                     padding: '16px',
                                                     border: '1px solid var(--border-color)',

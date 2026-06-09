@@ -5,11 +5,12 @@ import ThemeToggle from './ThemeToggle';
 export default function LandingNavbar() {
   const navItems = [
     { label: 'Home', href: '#home', active: true },
-    { label: 'Resources', to: '/dashboard/resources' },
+    { label: 'Resources', to: '/resources' },
     { label: 'Reservations', to: '/login' },
     { label: 'About Us', href: '#about-us' },
     { label: 'Contact Us', href: '#contact-us' },
   ];
+  
 
   const handleNavClick = (event, href) => {
     const target = document.querySelector(href);
@@ -31,7 +32,7 @@ export default function LandingNavbar() {
             <School size={18} />
           </div>
           <div>
-            <div className="landing-navbar__brand-title">Facilio Hub</div>
+            <div className="landing-navbar__brand-title">Facilio Campus</div>
             <div className="landing-navbar__brand-subtitle">Smart campus portal</div>
           </div>
         </Link>

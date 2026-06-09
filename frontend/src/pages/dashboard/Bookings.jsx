@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Building, Users, Clock, FileText, AlertCircle, UploadCloud } from 'lucide-react';
+import { Building, Users, Clock, FileText, AlertCircle, UploadCloud, Landmark, Monitor, Trophy, Calendar, Send, Check, Minus, Plus, ClipboardCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { bookingService } from '../../services/bookingService';
@@ -58,7 +59,6 @@ export function StudentBookingsView() {
 
   // Availability check
   const [conflicts, setConflicts] = useState([]);
-  const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -67,11 +67,97 @@ export function StudentBookingsView() {
     startTime: '',
     endTime: '',
     purpose: '',
-    expectedAttendees: '',
+    expectedAttendees: '5',
     additionalRequirements: '',
   });
   const [durationHours, setDurationHours] = useState(2);
   const [file, setFile] = useState(null);
+
+  // Multi-resource conflicts state for grid status pills
+  const [resourceConflicts, setResourceConflicts] = useState({});
+
+  // Search and Filter States for resource list
+  const [searchQuery, setSearchQuery] = useState('');
+  const [resourceTypeFilter, setResourceTypeFilter] = useState('ALL');
+
+  const filteredResources = useMemo(() => {
+    return resources.filter(res => {
+      // 1. Filter by resource type
+      const n = res.name.toLowerCase();
+      if (resourceTypeFilter === 'ROOM' && !n.includes('seminar') && !n.includes('room') && !n.includes('hall')) {
+        return false;
+      }
+      if (resourceTypeFilter === 'LAB' && !n.includes('computer') && !n.includes('lab') && !n.includes('tech') && !n.includes('pc')) {
+        return false;
+      }
+      if (resourceTypeFilter === 'COURT' && !n.includes('court') && !n.includes('sport') && !n.includes('gym') && !n.includes('ground')) {
+        return false;
+      }
+
+      // 2. Filter by search query
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return n.includes(query) || res.capacity.toString().includes(query) || (res.location && res.location.toLowerCase().includes(query));
+      }
+
+      return true;
+    });
+  }, [resources, searchQuery, resourceTypeFilter]);
+
+  useEffect(() => {
+    if (formData.date && resources.length > 0) {
+      const fetchAllAvailability = async () => {
+        const conflictsMap = {};
+        await Promise.all(
+          resources.map(async (res) => {
+            try {
+              const slots = await bookingService.getAvailability(user?.token, res.id, formData.date);
+              conflictsMap[res.id] = slots || [];
+            } catch (err) {
+              console.error(`Failed to fetch availability for resource ${res.id}`, err);
+              conflictsMap[res.id] = [];
+            }
+          })
+        );
+        setResourceConflicts(conflictsMap);
+      };
+      fetchAllAvailability();
+    } else {
+      setResourceConflicts({});
+    }
+  }, [formData.date, resources, user]);
+
+  const fetchMyBookings = useCallback(async () => {
+    if (!user?.token) return;
+    setLoadingBookings(true);
+    setBookingError('');
+    try {
+      const data = await bookingService.getMyBookings(user.token);
+      setMyBookings(data);
+    } catch (err) {
+      console.error('Failed to fetch bookings', err);
+      setBookingError(err.message || 'Unable to load your bookings right now.');
+    } finally {
+      setLoadingBookings(false);
+    }
+  }, [user]);
+
+  const fetchResources = useCallback(async () => {
+    setLoadingResources(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/resources`, {
+        headers: { 'Authorization': `Bearer ${user?.token}`, 'Accept': 'application/json' }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setResources(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch resources', err);
+    } finally {
+      setLoadingResources(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (location.state?.action === 'create') setActiveTab('create');
@@ -86,22 +172,7 @@ export function StudentBookingsView() {
     } else if (activeTab === 'view' && user?.token) {
       fetchMyBookings();
     }
-  }, [activeTab, user?.token]);
-
-  const fetchMyBookings = async () => {
-    if (!user?.token) return;
-    setLoadingBookings(true);
-    setBookingError('');
-    try {
-      const data = await bookingService.getMyBookings(user.token);
-      setMyBookings(data);
-    } catch (err) {
-      console.error('Failed to fetch bookings', err);
-      setBookingError(err.message || 'Unable to load your bookings right now.');
-    } finally {
-      setLoadingBookings(false);
-    }
-  };
+  }, [activeTab, user, fetchResources, fetchMyBookings, resources.length]);
 
   const handleCancelBooking = async (id) => {
     const confirmed = await showConfirm({
@@ -134,23 +205,6 @@ export function StudentBookingsView() {
     }
   };
 
-  const fetchResources = async () => {
-    setLoadingResources(true);
-    try {
-      const response = await fetch(`${API_BASE}/api/resources`, {
-        headers: { 'Authorization': `Bearer ${user?.token}`, 'Accept': 'application/json' }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setResources(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch resources', err);
-    } finally {
-      setLoadingResources(false);
-    }
-  };
-
   const selectedResource = useMemo(() =>
     resources.find(r => r.id.toString() === formData.resourceId.toString()),
     [resources, formData.resourceId]);
@@ -168,21 +222,18 @@ export function StudentBookingsView() {
   useEffect(() => {
     if (formData.resourceId && formData.date) {
       const checkConflicts = async () => {
-        setIsCheckingConflicts(true);
         try {
           const bookedSlots = await bookingService.getAvailability(user?.token, formData.resourceId, formData.date);
           setConflicts(bookedSlots || []);
         } catch (err) {
           console.error("Failed to fetch availability", err);
-        } finally {
-          setIsCheckingConflicts(false);
         }
       };
       checkConflicts();
     } else {
       setConflicts([]);
     }
-  }, [formData.resourceId, formData.date, user?.token]);
+  }, [formData.resourceId, formData.date, user]);
 
   // Auto-calculate end time whenever start time or duration changes
   useEffect(() => {
@@ -277,7 +328,7 @@ export function StudentBookingsView() {
         title: 'Check-In Code Copied',
         message: 'The booking QR payload is ready to paste into the verification screen.',
       });
-    } catch (error) {
+    } catch {
       showToast({
         variant: 'error',
         title: 'Copy Failed',
@@ -449,22 +500,138 @@ export function StudentBookingsView() {
     }
   };
 
-  const cardStyle = {
-    background: 'var(--bg-card)',
-    border: '1px solid #3c547dff',
-    borderRadius: '16px',
-    padding: '24px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
-    color: 'var(--text-primary)',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+  const decreaseAttendees = () => {
+    const val = parseInt(formData.expectedAttendees || '5');
+    if (val > 1) {
+      setFormData(prev => ({ ...prev, expectedAttendees: String(val - 1) }));
+    }
   };
 
-  const inputStyle = {
-    padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)',
-    background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.95rem', width: '100%',
-    outlineColor: '#3b82f6', appearance: 'none', colorScheme: 'inherit'
+  const increaseAttendees = () => {
+    const val = parseInt(formData.expectedAttendees || '5');
+    const limit = selectedResource?.capacity ?? 100;
+    if (val < limit) {
+      setFormData(prev => ({ ...prev, expectedAttendees: String(val + 1) }));
+    }
+  };
+
+  const getResourceIcon = (name) => {
+    const n = name.toLowerCase();
+    if (n.includes('seminar') || n.includes('room') || n.includes('hall')) {
+      return <Landmark size={28} color="#2563eb" />;
+    }
+    if (n.includes('computer') || n.includes('lab') || n.includes('tech') || n.includes('pc')) {
+      return <Monitor size={28} color="#2563eb" />;
+    }
+    if (n.includes('court') || n.includes('sport') || n.includes('gym') || n.includes('ground')) {
+      return <Trophy size={28} color="#f97316" />;
+    }
+    return <Building size={28} color="#2563eb" />;
+  };
+
+  const getResourceAvailability = (resId) => {
+    if (!formData.date) {
+      return { label: 'Available', type: 'available' };
+    }
+    const resConflicts = resourceConflicts[resId] || [];
+    if (resConflicts.length === 0) {
+      return { label: 'Available', type: 'available' };
+    }
+    const c = resConflicts[0];
+    const startStr = formatBookingTime(c.startTime);
+    const endStr = formatBookingTime(c.endTime);
+    return { label: `Busy ${startStr}–${endStr}`, type: 'busy' };
+  };
+
+  const isTimeSlotTaken = (slotTime) => {
+    if (conflicts.length === 0) return false;
+    const startMins = toMinutes(slotTime);
+    const endMins = startMins + effectiveDurationHours * 60;
+    return conflicts.some(c => {
+      const cStart = toMinutes(c.startTime);
+      const cEnd = toMinutes(c.endTime);
+      const maxStart = Math.max(startMins, cStart);
+      const minEnd = Math.min(endMins, cEnd);
+      return maxStart < minEnd;
+    });
+  };
+
+  const isTimeSlotDisabled = (slotTime) => {
+    if (isBookingDateToday) {
+      const slotMins = toMinutes(slotTime);
+      const currentMins = toMinutes(currentTimeString);
+      if (slotMins !== null && currentMins !== null && slotMins < currentMins) {
+        return true;
+      }
+    }
+    return isTimeSlotTaken(slotTime);
+  };
+
+  const getTimelineBlockState = (blockStart, blockEnd) => {
+    const toMinsVal = (t) => {
+      if (!t || typeof t !== 'string' || !t.includes(':')) return 0;
+      const [h, m] = t.split(':');
+      return parseInt(h) * 60 + parseInt(m);
+    };
+
+    const bStartMins = toMinsVal(blockStart);
+    const bEndMins = toMinsVal(blockEnd);
+
+    // 1. Check if selected by current booking
+    if (formData.startTime && formData.endTime) {
+      const selStartMins = toMinsVal(formData.startTime);
+      const selEndMins = toMinsVal(formData.endTime);
+
+      const maxStart = Math.max(bStartMins, selStartMins);
+      const minEnd = Math.min(bEndMins, selEndMins);
+      if (maxStart < minEnd) {
+        return 'selected';
+      }
+    }
+
+    // 2. Check if booked (conflicts)
+    if (conflicts.length > 0) {
+      const isBooked = conflicts.some(c => {
+        const cStart = toMinsVal(c.startTime);
+        const cEnd = toMinsVal(c.endTime);
+        const maxStart = Math.max(bStartMins, cStart);
+        const minEnd = Math.min(bEndMins, cEnd);
+        return maxStart < minEnd;
+      });
+      if (isBooked) return 'booked';
+    }
+
+    return 'available';
+  };
+
+  const dateList = useMemo(() => {
+    const dates = [];
+    const today = new Date();
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      dates.push(d);
+    }
+    return dates;
+  }, []);
+
+  const timeSlots = useMemo(() => {
+    return [
+      { value: '08:00', label: '08:00 AM' },
+      { value: '09:00', label: '09:00 AM' },
+      { value: '10:00', label: '10:00 AM' },
+      { value: '11:00', label: '11:00 AM' },
+      { value: '12:00', label: '12:00 PM' },
+      { value: '13:00', label: '01:00 PM' },
+      { value: '14:00', label: '02:00 PM' },
+      { value: '15:00', label: '03:00 PM' },
+    ];
+  }, []);
+
+  const formatDateDisplay = (dateString) => {
+    if (!dateString) return 'Not selected';
+    const d = new Date(dateString);
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   };
 
   return (
@@ -472,7 +639,7 @@ export function StudentBookingsView() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '4px', color: 'var(--text-primary)' }}>My Bookings</h2>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Manage your facility and resource bookings</div>
+
         </div>
 
         <div style={{ display: 'flex', background: 'var(--bg-icon)', padding: '6px', borderRadius: '10px' }}>
@@ -594,250 +761,778 @@ export function StudentBookingsView() {
             )}
           </div>
         ) : (
-          <div style={{ background: 'var(--bg-color)', padding: '40px', borderRadius: '16px', color: 'var(--text-primary)', fontFamily: 'Inter, sans-serif' }}>
+          <div style={{
+            background: 'var(--bg-color)', padding: '32px', borderRadius: '16px',
+            border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontFamily: 'Inter, sans-serif'
+          }}>
             <div style={{ marginBottom: '32px' }}>
               <h3 style={{ fontSize: '1.75rem', fontWeight: '800', marginBottom: '8px' }}>
                 Create New Booking
               </h3>
-              <p style={{ color: 'var(--text-muted)' }}>Select your preferred resource, date, time, and party size</p>
+              <p style={{ color: 'var(--text-muted)' }}>Select a resource, choose your time, and confirm details</p>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'minmax(250px, 1fr) minmax(250px, 1fr) minmax(250px, 1fr)', gap: '24px' }}>
+            {/* Stepper */}
+            {(() => {
+              const step1Completed = !!formData.resourceId;
+              const step2Completed = step1Completed && !!formData.date && !!formData.startTime;
+              const step3Completed = step2Completed && !!formData.purpose && !!formData.expectedAttendees;
 
-              {/* CARD 1: SELECT RESOURCE */}
-              <div style={cardStyle}>
-                <h4 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0 }}>Select Resource</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <select
-                    name="resourceId"
-                    value={formData.resourceId}
-                    onChange={handleInputChange}
-                    required
-                    style={inputStyle}
-                  >
-                    <option value="" disabled>Choose a resource</option>
-                    {loadingResources ? <option disabled>Loading...</option> : resources.map(r => (
-                      <option key={r.id} value={r.id}>{r.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600' }}>Additional Requirements</label>
-                  <input
-                    type="text"
-                    name="additionalRequirements"
-                    value={formData.additionalRequirements}
-                    onChange={handleInputChange}
-                    placeholder="e.g. Projectors, Sport Items, Mics..."
-                    style={inputStyle}
-                  />
-                </div>
-
-                {selectedResource && (
-                  <div style={{ marginTop: '16px', background: 'var(--bg-color)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                      <Building size={18} color="#3b82f6" />
-                      <span style={{ fontWeight: '600', fontSize: '0.95rem' }}>{selectedResource.location || 'Campus Facilities'}</span>
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '40px', maxWidth: '800px' }}>
+                  {/* Step 1 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      background: step1Completed ? '#2563eb' : 'transparent',
+                      color: step1Completed ? '#ffffff' : '#64748b',
+                      border: step1Completed ? 'none' : '1.5px solid var(--border-color)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.9rem'
+                    }}>
+                      {step1Completed ? <Check size={18} /> : '1'}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                      <Users size={16} />
-                      Capacity: {selectedResource.capacity} people
+                    <span style={{ fontWeight: step1Completed ? '700' : '500', color: step1Completed ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '0.95rem' }}>Resource</span>
+                  </div>
+
+                  {/* Line 1-2 */}
+                  <div style={{ flex: '1', height: '2px', background: step1Completed ? '#2563eb' : 'var(--border-color)', margin: '0 12px', minWidth: '40px' }} />
+
+                  {/* Step 2 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      background: step2Completed ? '#2563eb' : step1Completed ? '#2563eb' : 'transparent',
+                      color: step2Completed || step1Completed ? '#ffffff' : '#64748b',
+                      border: step2Completed || step1Completed ? 'none' : '1.5px solid var(--border-color)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.9rem'
+                    }}>
+                      {step2Completed ? <Check size={18} /> : '2'}
                     </div>
-                    {isAuditorium && (
-                      <div style={{ background: 'rgba(234, 179, 8, 0.1)', color: '#d97706', padding: '10px', borderRadius: '8px', fontSize: '0.8rem', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                        <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-                        <span>Auditorium bookings require written PDF approval from the Faculty Head upon reservation.</span>
-                      </div>
+                    <span style={{ fontWeight: step1Completed ? '700' : '500', color: step1Completed ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '0.95rem' }}>Date & Time</span>
+                  </div>
+
+                  {/* Line 2-3 */}
+                  <div style={{ flex: '1', height: '2px', background: step2Completed ? '#2563eb' : 'var(--border-color)', margin: '0 12px', minWidth: '40px' }} />
+
+                  {/* Step 3 */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      background: step3Completed ? '#2563eb' : 'transparent',
+                      color: step3Completed ? '#ffffff' : '#64748b',
+                      border: step3Completed ? 'none' : '1.5px solid var(--border-color)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.9rem'
+                    }}>
+                      3
+                    </div>
+                    <span style={{ fontWeight: step2Completed ? '700' : '500', color: step2Completed ? 'var(--text-primary)' : 'var(--text-muted)', fontSize: '0.95rem' }}>Confirm</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Form grid */}
+            <form onSubmit={handleSubmit} className="booking-form-grid">
+
+              {/* Column 1: Main selection steps */}
+              <div>
+                {/* SECTION 1: Select Resource */}
+                <div className="booking-section-card">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Building size={20} color="#2563eb" />
+                      <h4 style={{ fontSize: '1.15rem', fontWeight: '700', margin: 0 }}>Select Resource</h4>
+                    </div>
+                    {formData.resourceId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            resourceId: '',
+                            date: '',
+                            startTime: '',
+                            endTime: '',
+                            additionalRequirements: ''
+                          }));
+                          setSearchQuery('');
+                          setResourceTypeFilter('ALL');
+                        }}
+                        style={{
+                          background: 'transparent', border: 'none', color: '#2563eb', fontWeight: '700',
+                          fontSize: '0.85rem', cursor: 'pointer', outline: 'none'
+                        }}
+                      >
+                        Clear
+                      </button>
                     )}
                   </div>
-                )}
-              </div>
 
-              {/* CARD 2: SELECT TIME */}
-              <div style={cardStyle}>
-                <h4 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0 }}>Select Time</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <input
-                    type="date"
-                    name="date"
-                    value={formData.date}
-                    onChange={handleInputChange}
-                    min={todayDateString}
-                    max={maxBookingDateString}
-                    required
-                    style={inputStyle}
-                  />
-                </div>
+                  {/* Filter controls: shown only when no resource is selected */}
+                  {!formData.resourceId && (
+                    <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', width: '100%' }}>
+                      <div style={{ position: 'relative', flex: '1', minWidth: '200px' }}>
+                        <input
+                          type="text"
+                          placeholder="Search resources by name or location..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          style={{
+                            width: '100%', padding: '10px 14px', paddingRight: searchQuery ? '36px' : '14px', borderRadius: '10px',
+                            border: '1px solid var(--border-color)', background: 'var(--bg-color)',
+                            color: 'var(--text-primary)', fontSize: '0.95rem', outline: 'none'
+                          }}
+                        />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchQuery('')}
+                            style={{
+                              position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                              background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer',
+                              fontSize: '1.2rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              padding: 0, width: '20px', height: '20px'
+                            }}
+                            title="Clear search"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <select
+                          value={resourceTypeFilter}
+                          onChange={(e) => setResourceTypeFilter(e.target.value)}
+                          style={{
+                            padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                            background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.95rem',
+                            outline: 'none', minWidth: '150px', colorScheme: 'inherit'
+                          }}
+                        >
+                          <option value="ALL">All Types</option>
+                          <option value="ROOM">Seminar Rooms</option>
+                          <option value="LAB">Computer Labs</option>
+                          <option value="COURT">Sports Courts</option>
+                        </select>
+                        {resourceTypeFilter !== 'ALL' && (
+                          <button
+                            type="button"
+                            onClick={() => setResourceTypeFilter('ALL')}
+                            style={{
+                              background: 'transparent', border: 'none', color: '#2563eb', fontWeight: '700',
+                              fontSize: '0.85rem', cursor: 'pointer', outline: 'none'
+                            }}
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  Booking dates are available from {todayDateString} to {maxBookingDateString}.
-                </div>
+                  {loadingResources ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading resources...</div>
+                  ) : formData.resourceId ? (
+                    /* Show ONLY the chosen resource card with the day schedule timeline */
+                    resources
+                      .filter(res => res.id.toString() === formData.resourceId.toString())
+                      .map(res => {
+                        const availability = getResourceAvailability(res.id);
+                        return (
+                          <div
+                            key={res.id}
+                            className="resource-card-item selected"
+                            style={{
+                              borderWidth: '2px',
+                              borderColor: '#2563eb',
+                              width: '100%',
+                              maxWidth: 'none',
+                              textAlign: 'left',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              padding: '24px',
+                              cursor: 'default',
+                              background: 'var(--bg-card)'
+                            }}
+                          >
+                            <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                                <div style={{
+                                  background: '#f1f5f9', width: '56px', height: '56px', borderRadius: '12px',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}>
+                                  {getResourceIcon(res.name)}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: '800', fontSize: '1.2rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                                    {res.name}
+                                  </div>
+                                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                                    Capacity: Up to {res.capacity} people {res.location ? `| ${res.location}` : ''}
+                                  </div>
+                                </div>
+                              </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                  <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Start Time</label>
-                  <input
-                    type="time"
-                    name="startTime"
-                    value={formData.startTime}
-                    onChange={handleInputChange}
-                    min={isBookingDateToday ? currentTimeString : undefined}
-                    required
-                    style={inputStyle}
-                  />
-                </div>
+                              <span style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                padding: '6px 14px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '700',
+                                background: availability.type === 'available' ? '#dcfce7' : '#fef3c7',
+                                color: availability.type === 'available' ? '#15803d' : '#d97706',
+                              }}>
+                                <span style={{
+                                  width: '6px', height: '6px', borderRadius: '50%',
+                                  background: availability.type === 'available' ? '#15803d' : '#d97706'
+                                }} />
+                                {availability.label}
+                              </span>
+                            </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-color)', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Duration</div>
-                  {isAuditorium ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <button type="button" onClick={() => setDurationHours(Math.max(1, durationHours - 1))} style={{ background: 'var(--border-color)', border: 'none', color: 'var(--text-primary)', width: '26px', height: '26px', borderRadius: '6px', cursor: 'pointer' }}>-</button>
-                      <span style={{ fontSize: '0.95rem', fontWeight: '600' }}>{durationHours} hr</span>
-                      <button type="button" onClick={() => setDurationHours(Math.min(10, durationHours + 1))} style={{ background: '#3b82f6', border: 'none', color: 'white', width: '26px', height: '26px', borderRadius: '6px', cursor: 'pointer' }}>+</button>
+                            {/* Day Timeline */}
+                            <div style={{ marginTop: '20px', width: '100%', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                                <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-secondary)' }}>
+                                  Day Schedule ({formData.date ? formatDateDisplay(formData.date) : 'Today'})
+                                </div>
+                                <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#2563eb' }} />
+                                    Selected
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#ef4444' }} />
+                                    Booked
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: 'var(--bg-alt)', border: '1px solid var(--border-color)' }} />
+                                    Available
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: '6px' }}>
+                                {[
+                                  { start: '08:00', end: '09:00', label: '8-9am' },
+                                  { start: '09:00', end: '10:00', label: '9-10am' },
+                                  { start: '10:00', end: '11:00', label: '10-11am' },
+                                  { start: '11:00', end: '12:00', label: '11-12pm' },
+                                  { start: '12:00', end: '13:00', label: '12-1pm' },
+                                  { start: '13:00', end: '14:00', label: '1-2pm' },
+                                  { start: '14:00', end: '15:00', label: '2-3pm' },
+                                  { start: '15:00', end: '16:00', label: '3-4pm' },
+                                  { start: '16:00', end: '17:00', label: '4-5pm' },
+                                ].map((block, idx) => {
+                                  const state = getTimelineBlockState(block.start, block.end);
+                                  let bg = 'var(--bg-alt)';
+                                  let border = '1px solid var(--border-color)';
+                                  let textColor = 'var(--text-muted)';
+
+                                  if (state === 'selected') {
+                                    bg = '#2563eb';
+                                    border = '1px solid #2563eb';
+                                    textColor = '#ffffff';
+                                  } else if (state === 'booked') {
+                                    bg = 'rgba(239, 68, 68, 0.08)';
+                                    border = '1px solid rgba(239, 68, 68, 0.25)';
+                                    textColor = '#ef4444';
+                                  }
+
+                                  return (
+                                    <div
+                                      key={idx}
+                                      style={{
+                                        background: bg,
+                                        border: border,
+                                        borderRadius: '8px',
+                                        padding: '8px 2px',
+                                        textAlign: 'center',
+                                        fontSize: '0.72rem',
+                                        fontWeight: '700',
+                                        color: textColor,
+                                        transition: 'all 0.2s ease'
+                                      }}
+                                    >
+                                      <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', opacity: 0.8, marginBottom: '2px' }}>
+                                        {block.label.replace('am', '').replace('pm', '')}
+                                      </div>
+                                      <div>
+                                        {state === 'selected' ? 'Mine' : state === 'booked' ? 'Busy' : 'Free'}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                  ) : !searchQuery && resourceTypeFilter === 'ALL' ? (
+                    /* Search placeholder - do not show all cards initially */
+                    <div style={{
+                      padding: '36px', border: '1px dashed var(--border-color)', borderRadius: '12px',
+                      textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.92rem', background: 'var(--bg-alt)'
+                    }}>
+                      Use the search bar or type filter above to select a resource.
+                    </div>
+                  ) : filteredResources.length === 0 ? (
+                    <div style={{
+                      padding: '36px', border: '1px dashed var(--border-color)', borderRadius: '12px',
+                      textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.92rem', background: 'var(--bg-alt)'
+                    }}>
+                      No matching resources found. Try another search terms.
                     </div>
                   ) : (
-                    <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-muted)' }}>2 hours (Fixed)</span>
+                    /* Render filtered matches */
+                    <div className="resource-cards-grid">
+                      {filteredResources.map(res => {
+                        const availability = getResourceAvailability(res.id);
+                        return (
+                          <div
+                            key={res.id}
+                            onClick={() => handleInputChange({ target: { name: 'resourceId', value: res.id } })}
+                            className="resource-card-item"
+                          >
+                            <div style={{
+                              background: '#f1f5f9', width: '56px', height: '56px', borderRadius: '12px',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px'
+                            }}>
+                              {getResourceIcon(res.name)}
+                            </div>
+
+                            <div style={{ fontWeight: '700', fontSize: '1.05rem', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                              {res.name}
+                            </div>
+
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '14px' }}>
+                              Up to {res.capacity} people
+                            </div>
+
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '6px',
+                              padding: '5px 12px', borderRadius: '999px', fontSize: '0.78rem', fontWeight: '700',
+                              background: availability.type === 'available' ? '#dcfce7' : '#fef3c7',
+                              color: availability.type === 'available' ? '#15803d' : '#d97706',
+                            }}>
+                              <span style={{
+                                width: '6px', height: '6px', borderRadius: '50%',
+                                background: availability.type === 'available' ? '#15803d' : '#d97706'
+                              }} />
+                              {availability.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Additional requirements input */}
+                  {selectedResource && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '24px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '700' }}>Additional Requirements</label>
+                        {formData.additionalRequirements && (
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, additionalRequirements: '' }))}
+                            style={{
+                              background: 'transparent', border: 'none', color: '#2563eb', fontWeight: '700',
+                              fontSize: '0.82rem', cursor: 'pointer', outline: 'none'
+                            }}
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        name="additionalRequirements"
+                        value={formData.additionalRequirements}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Projectors, Sport Items, Mics..."
+                        style={{
+                          padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                          background: 'var(--bg-color)', color: 'var(--text-primary)', fontSize: '0.95rem', width: '100%',
+                          outlineColor: '#2563eb'
+                        }}
+                      />
+                    </div>
                   )}
                 </div>
 
-                <div style={{ background: 'var(--bg-color)', padding: '12px 14px', borderRadius: '10px', border: '1px dashed var(--border-color)', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                  Booking hours end at {formatBookingTime(BOOKING_DAY_END_TIME)}. Last booking period: {LAST_BOOKING_SLOT_LABEL}.
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>End Time</label>
-                  <input
-                    type="time"
-                    name="endTime"
-                    value={formData.endTime}
-                    readOnly
-                    style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }}
-                  />
-                </div>
-
-                {conflicts.length > 0 && (
-                  <div style={{ marginTop: '12px' }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Clock size={14} /> ALREADY BOOKED SLOTS
+                {/* SECTION 2: Pick a Date */}
+                <div className="booking-section-card" style={{ opacity: selectedResource ? 1 : 0.6, pointerEvents: selectedResource ? 'auto' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Calendar size={20} color="#2563eb" />
+                      <h4 style={{ fontSize: '1.15rem', fontWeight: '700', margin: 0 }}>Pick a Date</h4>
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {conflicts.map((slot, i) => (
-                        <span key={i} style={{ background: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600', border: '1px solid #fecaca' }}>
-                          {formatBookingRange(slot.startTime, slot.endTime)}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {hasLateTimeSelection && (
-                  <div style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.35)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
-                    <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-                    <span>{lastBookingErrorMessage}</span>
-                  </div>
-                )}
-
-                {isDateOutsideAllowedRange && (
-                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
-                    <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-                    <span>Please choose a booking date between {todayDateString} and {maxBookingDateString}.</span>
-                  </div>
-                )}
-
-                {hasPastTimeSelection && (
-                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
-                    <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-                    <span>For today&apos;s bookings, start time must be the current time or later.</span>
-                  </div>
-                )}
-
-                {hasConflict && (
-                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
-                    <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-                    <span>This resource is already booked during this time range. Please choose a different time.</span>
-                  </div>
-                )}
-              </div>
-
-              {/* CARD 3: PARTY SIZE / FINAL DETAILS */}
-              <div style={{ ...cardStyle }}>
-                <h4 style={{ fontSize: '1.1rem', fontWeight: '700', margin: 0 }}>Final Details</h4>
-
-                <div style={{ opacity: hasConflict ? 0.4 : 1, pointerEvents: hasConflict ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Expected Attendees *</label>
-                    <div style={{ position: 'relative' }}>
-                      <span style={{ position: 'absolute', top: '12px', left: '14px', color: 'var(--text-muted)' }}><Users size={16} /></span>
-                      <input
-                        type="number"
-                        name="expectedAttendees"
-                        value={formData.expectedAttendees}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="Number of guests"
-                        min="1"
-                        max={attendeeLimit || undefined}
-                        style={{ ...inputStyle, paddingLeft: '38px' }}
-                      />
-                    </div>
-                    {attendeeLimit && (
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                        Maximum {attendeeLimit} attendees for the selected resource.
-                      </div>
+                    {formData.date && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, date: '', startTime: '', endTime: '' }));
+                        }}
+                        style={{
+                          background: 'transparent', border: 'none', color: '#2563eb', fontWeight: '700',
+                          fontSize: '0.85rem', cursor: 'pointer', outline: 'none'
+                        }}
+                      >
+                        Clear
+                      </button>
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Purpose *</label>
-                    <input
-                      type="text"
+                  <div className="date-cards-scroll">
+                    {dateList.map((d, index) => {
+                      const dateVal = formatDateInputValue(d);
+                      const isSelected = formData.date === dateVal;
+                      const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+                      const dayNum = d.getDate();
+
+                      return (
+                        <div
+                          key={index}
+                          onClick={() => handleInputChange({ target: { name: 'date', value: dateVal } })}
+                          className={`date-card-item ${isSelected ? 'selected' : ''}`}
+                        >
+                          <span style={{ fontSize: '0.8rem', fontWeight: '600', color: isSelected ? 'white' : 'var(--text-muted)', marginBottom: '4px' }}>
+                            {dayName}
+                          </span>
+                          <span style={{ fontSize: '1.25rem', fontWeight: '800', color: isSelected ? 'white' : 'var(--text-primary)' }}>
+                            {dayNum}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* SECTION 3: Pick a Start Time */}
+                <div className="booking-section-card" style={{ opacity: formData.date ? 1 : 0.6, pointerEvents: formData.date ? 'auto' : 'none' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Clock size={20} color="#2563eb" />
+                      <h4 style={{ fontSize: '1.15rem', fontWeight: '700', margin: 0 }}>Pick a Start Time</h4>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {formData.startTime && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleInputChange({ target: { name: 'startTime', value: '' } });
+                          }}
+                          style={{
+                            background: 'transparent', border: 'none', color: '#2563eb', fontWeight: '700',
+                            fontSize: '0.85rem', cursor: 'pointer', outline: 'none'
+                          }}
+                        >
+                          Clear
+                        </button>
+                      )}
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        background: '#eff6ff', color: '#2563eb', padding: '6px 12px', borderRadius: '8px',
+                        fontSize: '0.82rem', fontWeight: '700'
+                      }}>
+                        <Clock size={12} />
+                        {isAuditorium ? `${durationHours} hrs fixed` : '2 hrs fixed'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="time-slots-grid">
+                    {timeSlots.map(slot => {
+                      const isSelected = formData.startTime === slot.value;
+                      const isTaken = isTimeSlotDisabled(slot.value);
+
+                      return (
+                        <button
+                          key={slot.value}
+                          type="button"
+                          disabled={isTaken}
+                          onClick={() => handleInputChange({ target: { name: 'startTime', value: slot.value } })}
+                          className={`time-slot-btn ${isSelected ? 'selected' : ''}`}
+                        >
+                          {slot.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Time slot legend */}
+                  <div style={{ display: 'flex', gap: '18px', marginTop: '20px', fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#2563eb' }} />
+                      Selected
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '12px', height: '12px', borderRadius: '3px', border: '1.5px solid var(--border-color)', background: 'var(--bg-card)' }} />
+                      Available
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#f1f5f9', border: '1.5px solid #e2e8f0' }} />
+                      Taken
+                    </div>
+                  </div>
+
+                  {conflicts.length > 0 && (
+                    <div style={{ marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: '800', color: 'var(--text-muted)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Clock size={14} /> BOOKED TIME WINDOWS ON THIS DAY
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {conflicts.map((slot, i) => (
+                          <span key={i} style={{ background: '#fee2e2', color: '#991b1b', padding: '5px 12px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '700', border: '1px solid #fecaca' }}>
+                            {formatBookingRange(slot.startTime, slot.endTime)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {hasLateTimeSelection && (
+                    <div style={{ background: 'rgba(245, 158, 11, 0.08)', color: '#d97706', border: '1px solid rgba(245, 158, 11, 0.25)', padding: '12px 14px', borderRadius: '10px', fontSize: '0.85rem', display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '16px' }}>
+                      <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <span>{lastBookingErrorMessage}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Column 2: Sticky summary & final checks */}
+              <div className="reservation-summary-sticky">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
+                  <ClipboardCheck size={22} color="#2563eb" />
+                  <h4 style={{ fontSize: '1.15rem', fontWeight: '800', margin: 0 }}>Reservation Summary</h4>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                  {/* Summary Block: Resource */}
+                  <div className="summary-block-item">
+                    <span style={{ fontSize: '0.78rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>Resource</span>
+                    <span style={{ fontSize: '0.98rem', fontWeight: '700', color: selectedResource ? 'var(--text-primary)' : 'var(--text-muted)', fontStyle: selectedResource ? 'normal' : 'italic' }}>
+                      {selectedResource ? selectedResource.name : 'Not selected'}
+                    </span>
+                  </div>
+
+                  {/* Summary Block: Date */}
+                  <div className="summary-block-item">
+                    <span style={{ fontSize: '0.78rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>Date</span>
+                    <span style={{ fontSize: '0.98rem', fontWeight: '700', color: formData.date ? 'var(--text-primary)' : 'var(--text-muted)', fontStyle: formData.date ? 'normal' : 'italic' }}>
+                      {formData.date ? formatDateDisplay(formData.date) : 'Not selected'}
+                    </span>
+                  </div>
+
+                  {/* Summary Block: Time */}
+                  <div className="summary-block-item">
+                    <span style={{ fontSize: '0.78rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>Time</span>
+                    <span style={{ fontSize: '0.98rem', fontWeight: '700', color: formData.startTime ? 'var(--text-primary)' : 'var(--text-muted)', fontStyle: formData.startTime ? 'normal' : 'italic' }}>
+                      {formData.startTime ? formatBookingRange(formData.startTime, formData.endTime) : 'Not selected'}
+                    </span>
+                  </div>
+
+                  {/* Summary Block: Expected Attendees */}
+                  <div className="summary-block-item">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>Expected Attendees</span>
+                      {selectedResource && formData.expectedAttendees !== '5' && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, expectedAttendees: '5' }))}
+                          style={{
+                            background: 'transparent', border: 'none', color: '#2563eb', fontWeight: '700',
+                            fontSize: '0.78rem', cursor: 'pointer', outline: 'none'
+                          }}
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={decreaseAttendees}
+                        disabled={!selectedResource}
+                        style={{
+                          width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                          background: 'var(--bg-color)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                          opacity: selectedResource ? 1 : 0.5
+                        }}
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <span style={{ fontSize: '1.05rem', fontWeight: '800', minWidth: '24px', textAlign: 'center', color: 'var(--text-primary)' }}>
+                        {formData.expectedAttendees}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={increaseAttendees}
+                        disabled={!selectedResource}
+                        style={{
+                          width: '32px', height: '32px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                          background: 'var(--bg-color)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                          opacity: selectedResource ? 1 : 0.5
+                        }}
+                      >
+                        <Plus size={14} />
+                      </button>
+                      <span style={{ fontSize: '0.88rem', fontWeight: '600', color: 'var(--text-muted)' }}>people</span>
+                    </div>
+                    {selectedResource && (
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        Limit: {selectedResource.capacity} people
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Purpose text area */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Purpose</label>
+                      {formData.purpose && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, purpose: '' }))}
+                          style={{
+                            background: 'transparent', border: 'none', color: '#2563eb', fontWeight: '700',
+                            fontSize: '0.78rem', cursor: 'pointer', outline: 'none'
+                          }}
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    <textarea
                       name="purpose"
                       value={formData.purpose}
                       onChange={handleInputChange}
                       required
-                      placeholder="Reason for booking"
-                      style={inputStyle}
+                      placeholder="Reason for booking..."
+                      style={{
+                        width: '100%', height: '80px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                        padding: '12px', fontSize: '0.9rem', outline: 'none', resize: 'none', fontFamily: 'inherit',
+                        background: 'var(--bg-color)', color: 'var(--text-primary)'
+                      }}
                     />
                   </div>
 
-                  {isAuditorium && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '0.85rem', color: '#eab308', display: 'flex', alignItems: 'center', gap: '6px' }}><FileText size={14} /> Faculty Head Approval *</label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-color)', padding: '12px', borderRadius: '10px', border: '1px dashed var(--border-color)', cursor: 'pointer', fontSize: '0.85rem', color: file ? '#3b82f6' : 'var(--text-muted)' }}>
-                        <UploadCloud size={18} />
-                        {file ? file.name : 'Upload PDF Document'}
-                        <input type="file" accept=".pdf" onChange={handleFileChange} style={{ display: 'none' }} required />
-                      </label>
+                  {/* Auditorium duration selector & file approval */}
+                  {selectedResource && isAuditorium && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-alt)', padding: '10px 12px', borderRadius: '10px' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-muted)' }}>Duration (hrs)</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <button type="button" onClick={() => setDurationHours(Math.max(1, durationHours - 1))} style={{ background: 'var(--border-color)', border: 'none', color: 'var(--text-primary)', width: '24px', height: '24px', borderRadius: '6px', cursor: 'pointer' }}>-</button>
+                          <span style={{ fontSize: '0.9rem', fontWeight: '700' }}>{durationHours}</span>
+                          <button type="button" onClick={() => setDurationHours(Math.min(10, durationHours + 1))} style={{ background: '#2563eb', border: 'none', color: 'white', width: '24px', height: '24px', borderRadius: '6px', cursor: 'pointer' }}>+</button>
+                        </div>
+                      </div>
+
+                      <div style={{ border: '1.5px dashed #eab308', background: 'rgba(234, 179, 8, 0.04)', borderRadius: '12px', padding: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div style={{ fontSize: '0.78rem', color: '#b45309', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
+                            <FileText size={14} /> Faculty Head Approval *
+                          </div>
+                          {file && (
+                            <button
+                              type="button"
+                              onClick={() => setFile(null)}
+                              style={{
+                                background: 'transparent', border: 'none', color: '#b45309', fontWeight: '700',
+                                fontSize: '0.78rem', cursor: 'pointer', outline: 'none'
+                              }}
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                        <label style={{
+                          display: 'flex', alignItems: 'center', gap: '10px', background: 'white', padding: '10px',
+                          borderRadius: '8px', border: '1px solid var(--border-color)', cursor: 'pointer', fontSize: '0.82rem',
+                          color: file ? '#2563eb' : 'var(--text-muted)'
+                        }}>
+                          <UploadCloud size={16} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                            {file ? file.name : 'Upload PDF Document'}
+                          </span>
+                          <input type="file" accept=".pdf" onChange={handleFileChange} style={{ display: 'none' }} required />
+                        </label>
+                      </div>
                     </div>
                   )}
 
-                  <div style={{ background: 'var(--bg-color)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', marginTop: 'auto' }}>
-                    <div style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '12px' }}>Reservation Summary</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '8px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                      <span>Date:</span> <span style={{ color: 'var(--text-primary)' }}>{formData.date || '--'}</span>
-                      <span>Time:</span> <span style={{ color: 'var(--text-primary)' }}>{formData.startTime ? formatBookingRange(formData.startTime, formData.endTime) : '--'}</span>
-                      <span>Guests:</span> <span style={{ color: 'var(--text-primary)' }}>{formData.expectedAttendees || '--'}</span>
-                    </div>
-                  </div>
-
+                  {/* Submit Button & Clear All Selections */}
                   {(() => {
                     const isDisabled = hasConflict || hasLateTimeSelection || hasPastTimeSelection || isDateOutsideAllowedRange || !formData.date || !formData.startTime || !formData.resourceId || !formData.expectedAttendees || !formData.purpose || (isAuditorium && !file);
+                    const isAnySelected = formData.resourceId || formData.date || formData.startTime || formData.purpose || formData.additionalRequirements || file;
                     return (
-                      <button
-                        type="submit"
-                        disabled={isDisabled}
-                        style={{
-                          marginTop: '8px', padding: '14px', borderRadius: '10px',
-                          background: isDisabled ? 'var(--border-color)' : '#3b82f6',
-                          color: isDisabled ? 'var(--text-muted)' : 'white',
-                          border: 'none', fontWeight: '600', fontSize: '0.95rem', cursor: isDisabled ? 'not-allowed' : 'pointer', transition: 'all 0.2s'
-                        }}
-                      >
-                        Submit Reservation →
-                      </button>
-                    )
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                        <button
+                          type="submit"
+                          disabled={isDisabled}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            width: '100%',
+                            padding: '14px',
+                            borderRadius: '12px',
+                            fontWeight: '700',
+                            fontSize: '0.95rem',
+                            cursor: isDisabled ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.2s ease',
+                            border: isDisabled ? '1px solid var(--border-color)' : '1.5px solid #1e293b',
+                            background: isDisabled ? '#f1f5f9' : '#ffffff',
+                            color: isDisabled ? '#94a3b8' : '#1e293b',
+                          }}
+                        >
+                          <Send size={16} />
+                          Submit Booking
+                        </button>
+                        {isAnySelected && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData({
+                                resourceId: '',
+                                date: '',
+                                startTime: '',
+                                endTime: '',
+                                purpose: '',
+                                expectedAttendees: '5',
+                                additionalRequirements: ''
+                              });
+                              setFile(null);
+                              setDurationHours(2);
+                              setSearchQuery('');
+                              setResourceTypeFilter('ALL');
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '100%',
+                              padding: '10px',
+                              borderRadius: '10px',
+                              fontWeight: '600',
+                              fontSize: '0.88rem',
+                              cursor: 'pointer',
+                              border: '1px solid var(--border-color)',
+                              background: 'transparent',
+                              color: 'var(--text-muted)',
+                              transition: 'all 0.2s ease',
+                            }}
+                          >
+                            Clear All Selections
+                          </button>
+                        )}
+                      </div>
+                    );
                   })()}
+
                 </div>
               </div>
 

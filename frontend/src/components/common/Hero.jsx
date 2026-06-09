@@ -44,7 +44,7 @@ export default function Hero() {
 
           <p className="landing-hero__description">
             Book halls, find labs, coordinate facilities, and stay on top of campus requests
-            from one focused workspace built for students and staff.
+            from one focused workspace built for You.
           </p>
 
           <div className="landing-hero__actions">
@@ -59,7 +59,7 @@ export default function Hero() {
           <div className="landing-hero__meta">
             <div className="landing-hero__meta-item">
               <CalendarCheck2 size={18} />
-              <span>Room and resource booking in one place</span>
+              <span> resource booking in one place</span>
             </div>
             <div className="landing-hero__meta-item">
               <ShieldCheck size={18} />

@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { bookingService } from '../../services/bookingService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -38,14 +39,6 @@ const formatReportDate = (value) => {
   });
 };
 
-const formatReportDateTime = (value) => {
-  if (!value) {
-    return 'Not available';
-  }
-
-  return new Date(value).toLocaleString();
-};
-
 const escapeHtml = (value) => String(value ?? '')
   .replaceAll('&', '&amp;')
   .replaceAll('<', '&lt;')
@@ -74,17 +67,11 @@ export default function ManagerBookingsView() {
   });
 
 
-  useEffect(() => {
-    if (user?.token) {
-      fetchBookings();
-    }
-  }, [user?.token]);
+  const [scanning, setScanning] = useState(false);
+  const [scannerLoaded, setScannerLoaded] = useState(false);
+  const scannerRef = useRef(null);
 
-  useEffect(() => {
-    setCheckInCode('');
-  }, [selectedBooking?.id]);
-
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     if (!user?.token) return;
     setLoading(true);
     setLoadError('');
@@ -101,7 +88,65 @@ export default function ManagerBookingsView() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (scanning && !window.Html5QrcodeScanner) {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/html5-qrcode';
+      script.async = true;
+      script.onload = () => setScannerLoaded(true);
+      document.body.appendChild(script);
+    } else if (scanning && window.Html5QrcodeScanner) {
+      setScannerLoaded(true);
+    }
+  }, [scanning]);
+
+  useEffect(() => {
+    if (scanning && scannerLoaded) {
+      const html5QrcodeScanner = new window.Html5QrcodeScanner(
+        'reader',
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        /* verbose= */ false
+      );
+
+      const onScanSuccess = (decodedText) => {
+        setCheckInCode(decodedText);
+        setScanning(false);
+        setScannerLoaded(false);
+        html5QrcodeScanner.clear().catch(err => console.error("Failed to clear scanner", err));
+        showToast({
+          variant: 'success',
+          title: 'QR Code Decoded',
+          message: 'Payload extracted successfully. Click Verify Check-In to complete.',
+        });
+      };
+
+      const onScanFailure = () => {
+        // scan fail - keep trying
+      };
+
+      html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+      scannerRef.current = html5QrcodeScanner;
+
+      return () => {
+        if (scannerRef.current) {
+          scannerRef.current.clear().catch(err => console.error("Failed to clear scanner on unmount", err));
+          scannerRef.current = null;
+        }
+      };
+    }
+  }, [scanning, scannerLoaded, showToast]);
+
+  useEffect(() => {
+    if (user?.token) {
+      fetchBookings();
+    }
+  }, [user, fetchBookings]);
+
+  useEffect(() => {
+    setCheckInCode('');
+  }, [selectedBooking?.id]);
 
   const activeCardStyle = {
     background: 'var(--bg-card)', 
@@ -749,35 +794,71 @@ export default function ManagerBookingsView() {
                     This booking was checked in on <strong>{formatCheckInTimestamp(selectedBooking.checkedInAt)}</strong>
                     {selectedBooking.checkedInBy ? ` by ${selectedBooking.checkedInBy}` : ''}.
                   </div>
+                ) : scanning ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ background: '#000', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div id="reader" style={{ width: '100%' }}></div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setScanning(false);
+                        setScannerLoaded(false);
+                      }}
+                      style={{
+                        background: '#fee2e2', color: '#ef4444', border: '1px solid #f87171',
+                        padding: '10px 18px', borderRadius: '10px', cursor: 'pointer',
+                        fontSize: '0.85rem', fontWeight: '700', alignSelf: 'flex-start'
+                      }}
+                    >
+                      Cancel Scan
+                    </button>
+                  </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <textarea
-                      value={checkInCode}
-                      onChange={(event) => setCheckInCode(event.target.value)}
-                      placeholder="Paste scanned QR payload here"
-                      rows={4}
-                      style={{
-                        width: '100%',
-                        borderRadius: '12px',
-                        border: '1px solid var(--border-color)',
-                        background: 'var(--bg-card)',
-                        color: 'var(--text-primary)',
-                        padding: '14px',
-                        resize: 'vertical',
-                        outlineColor: '#2563eb',
-                        fontFamily: 'Consolas, monospace',
-                        fontSize: '0.84rem',
-                        lineHeight: 1.5
-                      }}
-                    />
+                    <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                      <textarea
+                        value={checkInCode}
+                        onChange={(event) => setCheckInCode(event.target.value)}
+                        placeholder="Paste scanned QR payload here, or click the camera button to scan live..."
+                        rows={4}
+                        style={{
+                          flex: 1,
+                          borderRadius: '12px',
+                          border: '1px solid var(--border-color)',
+                          background: 'var(--bg-card)',
+                          color: 'var(--text-primary)',
+                          padding: '14px',
+                          resize: 'vertical',
+                          outlineColor: '#2563eb',
+                          fontFamily: 'Consolas, monospace',
+                          fontSize: '0.84rem',
+                          lineHeight: 1.5
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setScanning(true)}
+                        style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                          width: '100px', borderRadius: '12px', border: '1px solid var(--border-color)',
+                          background: 'var(--bg-card)', color: '#2563eb', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600',
+                          transition: 'all 0.2s'
+                        }}
+                        title="Scan QR code using webcam"
+                      >
+                        <span style={{ fontSize: '1.5rem' }}>📷</span>
+                        <span>Scan QR</span>
+                      </button>
+                    </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                       <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                         Expected format: `FACILIO-CHECKIN|bookingId|token`
                       </div>
                       <button
                         onClick={handleVerifyCheckIn}
-                        disabled={verifyingCheckIn}
-                        style={{ background: '#2563eb', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '10px', cursor: verifyingCheckIn ? 'wait' : 'pointer', fontSize: '0.85rem', fontWeight: '700', opacity: verifyingCheckIn ? 0.72 : 1 }}
+                        disabled={verifyingCheckIn || !checkInCode.trim()}
+                        style={{ background: '#2563eb', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '10px', cursor: verifyingCheckIn || !checkInCode.trim() ? 'not-allowed' : 'pointer', fontSize: '0.85rem', fontWeight: '700', opacity: verifyingCheckIn || !checkInCode.trim() ? 0.6 : 1 }}
                       >
                         {verifyingCheckIn ? 'Verifying...' : 'Verify Check-In'}
                       </button>
