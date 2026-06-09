@@ -105,7 +105,13 @@ export default function LoginPage() {
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
-  const apiBase = (import.meta.env.VITE_API_BASE?.replace(/\/$/, '')) || 'http://localhost:8089';
+  const getDynamicApiBase = (base) => {
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return base.replace('localhost', window.location.hostname).replace('127.0.0.1', window.location.hostname);
+    }
+    return base;
+  };
+  const apiBase = getDynamicApiBase((import.meta.env.VITE_API_BASE?.replace(/\/$/, '')) || 'http://localhost:8089');
   const googleOAuthEnabled = import.meta.env.VITE_GOOGLE_OAUTH_ENABLED === 'true';
   const showDevSetup = import.meta.env.DEV || import.meta.env.VITE_SHOW_DEV_SETUP === 'true';
   
