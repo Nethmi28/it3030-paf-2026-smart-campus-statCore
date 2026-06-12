@@ -1,28 +1,66 @@
+import { useEffect } from 'react';
 import { ArrowRight, School, Sparkles } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
 
 export default function LandingNavbar() {
+  const location = useLocation();
+
   const navItems = [
-    { label: 'Home', href: '#home', active: true },
-    { label: 'Resources', to: '/resources' },
-    { label: 'Reservations', to: '/login' },
-    { label: 'About Us', href: '#about-us' },
-    { label: 'Contact Us', href: '#contact-us' },
+    { 
+      label: 'Home', 
+      to: '/', 
+      href: '#home',
+      active: location.pathname === '/' && (location.hash === '' || location.hash === '#home')
+    },
+    { 
+      label: 'Resources', 
+      to: '/resources',
+      active: location.pathname.startsWith('/resources')
+    },
+    { 
+      label: 'Reservations', 
+      to: '/login',
+      active: location.pathname === '/login'
+    },
+    { 
+      label: 'About Us', 
+      to: '/#about-us', 
+      href: '#about-us',
+      active: location.pathname === '/' && location.hash === '#about-us'
+    },
+    { 
+      label: 'Contact Us', 
+      to: '/#contact-us', 
+      href: '#contact-us',
+      active: location.pathname === '/' && location.hash === '#contact-us'
+    },
   ];
-  
 
-  const handleNavClick = (event, href) => {
-    const target = document.querySelector(href);
-
-    if (!target) {
-      return;
+  // Handle smooth scrolling when already on the homepage
+  const handleNavClick = (event, item) => {
+    if (item.href && location.pathname === '/') {
+      event.preventDefault();
+      const target = document.querySelector(item.href);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.history.replaceState(null, '', item.href);
+      }
     }
-
-    event.preventDefault();
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    window.history.replaceState(null, '', href);
   };
+
+  // Scroll to hash element when navigating from other pages to homepage
+  useEffect(() => {
+    if (location.pathname === '/' && location.hash) {
+      const timer = setTimeout(() => {
+        const target = document.querySelector(location.hash);
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [location.pathname, location.hash]);
 
   return (
     <nav className="landing-navbar">
@@ -39,24 +77,14 @@ export default function LandingNavbar() {
 
         <div className="landing-navbar__links" aria-label="Landing page sections">
           {navItems.map((item) => (
-            item.to ? (
-              <Link
-                key={item.label}
-                to={item.to}
-                className={`landing-navbar__link${item.active ? ' landing-navbar__link--active' : ''}`}
-              >
-                {item.label}
-              </Link>
-            ) : (
-              <a
-                key={item.label}
-                href={item.href}
-                className={`landing-navbar__link${item.active ? ' landing-navbar__link--active' : ''}`}
-                onClick={(event) => handleNavClick(event, item.href)}
-              >
-                {item.label}
-              </a>
-            )
+            <Link
+              key={item.label}
+              to={item.to}
+              className={`landing-navbar__link${item.active ? ' landing-navbar__link--active' : ''}`}
+              onClick={(event) => handleNavClick(event, item)}
+            >
+              {item.label}
+            </Link>
           ))}
         </div>
 
