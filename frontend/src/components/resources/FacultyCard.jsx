@@ -18,7 +18,7 @@ const facultyConfig = {
   },
   'School of Architecture': {
     gradient: 'faculty-gradient-arc',
-    image: 'https://images.unsplash.com/photo-1511818330032-954f7231e53e?auto=format&fit=crop&q=80&w=800',
+    image: 'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&q=80&w=800',
     icon: '📐'
   },
   'Faculty of Humanities & science': {

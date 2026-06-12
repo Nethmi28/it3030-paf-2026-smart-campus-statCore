@@ -72,7 +72,7 @@ export default function Hero() {
           <div className="landing-hero__visual-shell">
             <div className="landing-hero__visual-card">
               <img
-                src="/campus-hero.png"
+                src="/campus-hero.jpg"
                 alt="Facilio Hub campus preview"
                 className="landing-hero__image"
               />

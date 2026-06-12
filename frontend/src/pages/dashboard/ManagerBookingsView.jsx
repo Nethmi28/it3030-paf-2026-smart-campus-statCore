@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { bookingService } from '../../services/bookingService';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -47,6 +48,7 @@ const escapeHtml = (value) => String(value ?? '')
   .replaceAll("'", '&#39;');
 
 export default function ManagerBookingsView() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { showToast, showPrompt } = useToast();
   const { isDark } = useTheme();
@@ -892,7 +894,13 @@ export default function ManagerBookingsView() {
 
   return (
     <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'Inter, sans-serif' }}>
-      
+      <button 
+        onClick={() => navigate(-1)}
+        style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: '600', padding: 0, width: 'fit-content' }}
+      >
+        <ArrowLeft size={18} /> Back
+      </button>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h2 style={{ fontSize: '1.95rem', fontWeight: '800', marginBottom: '4px', color: 'var(--text-primary)' }}>Review Bookings</h2>
