@@ -11,6 +11,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { getDashboardPathForRole } from '../../utils/campusAuth';
+import ThemeToggle from '../../components/common/ThemeToggle';
+
 
 const OAUTH_RETURN_PATH_KEY = 'campusOAuthReturnPath';
 const POST_LOGIN_RETURN_PATH_KEY = 'campusPostLoginReturnPath';
@@ -114,7 +116,7 @@ export default function LoginPage() {
   const apiBase = getDynamicApiBase((import.meta.env.VITE_API_BASE?.replace(/\/$/, '')) || 'http://localhost:8089');
   const googleOAuthEnabled = import.meta.env.VITE_GOOGLE_OAUTH_ENABLED === 'true';
   const showDevSetup = import.meta.env.DEV || import.meta.env.VITE_SHOW_DEV_SETUP === 'true';
-  
+
   const { user, login, completeOAuthLogin, exchangeOAuthCode } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -243,7 +245,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     const result = await login(username, password);
-    
+
     if (result.success) {
       const fallbackPath = getDashboardPathForRole(result.role);
       const requestedPath = location.state?.from?.pathname;
@@ -351,8 +353,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#121a2b', padding: '0px' }}>
-      <div style={{ width: '100%', minHeight: '100vh', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', background: '#121a2b', borderRadius: '0px', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-color)', padding: '0px', transition: 'background-color 0.3s ease, color 0.3s ease' }}>
+      <div style={{ width: '100%', minHeight: '100vh', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', background: 'var(--bg-color)', borderRadius: '0px', overflow: 'hidden', transition: 'background-color 0.3s ease' }}>
         <div style={{ position: 'relative', minHeight: '440px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px clamp(24px, 4vw, 56px)', overflow: 'hidden' }}>
           {LOGIN_SLIDES.map((slide, slideIndex) => (
             <div
@@ -450,9 +452,10 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div style={{ background: '#121a2b', padding: '28px clamp(24px, 4vw, 56px)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '18px' }}>
-            <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '12px 18px', borderRadius: '999px', color: '#e2e8f0', textDecoration: 'none', background: 'rgba(30, 41, 59, 0.88)', border: '1px solid rgba(148, 163, 184, 0.16)', fontWeight: 600 }}>
+        <div style={{ background: 'var(--bg-color)', padding: '28px clamp(24px, 4vw, 56px)', display: 'flex', flexDirection: 'column', transition: 'background-color 0.3s ease' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+            <ThemeToggle />
+            <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '12px 18px', borderRadius: '999px', color: 'var(--text-primary)', textDecoration: 'none', background: 'var(--bg-card)', border: '1px solid var(--border-color)', fontWeight: 600, transition: 'background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease' }}>
               <Home size={16} />
               Home
             </Link>
@@ -461,15 +464,15 @@ export default function LoginPage() {
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ width: '100%', maxWidth: '430px' }}>
               <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', color: '#f8fafc', marginBottom: '16px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', color: 'var(--text-primary)', marginBottom: '16px' }}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '14px', background: 'rgba(59, 130, 246, 0.18)', border: '1px solid rgba(96, 165, 250, 0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <School size={20} />
                   </div>
                   <div style={{ fontSize: '2rem', fontWeight: 700, lineHeight: 1 }}>
-                    facilio<span style={{ color: '#94a3b8', fontWeight: 500 }}>/campus</span>
+                    facilio<span style={{ color: 'var(--text-muted)', fontWeight: 500 }}> campus</span>
                   </div>
                 </div>
-                <h2 style={{ margin: 0, color: '#f8fafc', fontSize: '1.6rem', fontWeight: 700 }}>Sign in to your account</h2>
+                <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.6rem', fontWeight: 700 }}>Sign in to your account</h2>
               </div>
 
               {error && (
@@ -480,12 +483,12 @@ export default function LoginPage() {
 
               <form onSubmit={handleSubmit}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '10px', color: '#e2e8f0', fontWeight: 600 }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                     Campus Email or ID
-                    <input name="username" value={form.username} onChange={handleInputChange} placeholder="e.g. st23707290 or st23707290@my.cu.lk" autoComplete="username" style={{ border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '14px', padding: '16px 18px', fontSize: '0.96rem', outline: 'none', background: '#121a2b', color: '#f8fafc', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)' }} />
+                    <input name="username" value={form.username} onChange={handleInputChange} placeholder="e.g. st23707290 or st23707290@my.cu.lk" autoComplete="username" style={{ border: '1px solid var(--border-color)', borderRadius: '14px', padding: '16px 18px', fontSize: '0.96rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)', transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease' }} />
                   </label>
 
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '10px', color: '#e2e8f0', fontWeight: 600 }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
                       <span>Password</span>
                       <button
@@ -495,26 +498,26 @@ export default function LoginPage() {
                           setRequestError('');
                           setRequestSuccess('');
                         }}
-                        style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.85rem', padding: 0 }}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85rem', padding: 0 }}
                       >
                         Need access?
                       </button>
                     </div>
                     <div style={{ position: 'relative' }}>
-                      <input type={showPassword ? 'text' : 'password'} name="password" value={form.password} onChange={handleInputChange} placeholder="Enter your password" autoComplete="current-password" style={{ border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '14px', padding: '16px 54px 16px 18px', fontSize: '0.96rem', outline: 'none', background: '#121a2b', color: '#f8fafc', width: '100%', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)' }} />
-                      <button type="button" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? 'Hide password' : 'Show password'} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
+                      <input type={showPassword ? 'text' : 'password'} name="password" value={form.password} onChange={handleInputChange} placeholder="Enter your password" autoComplete="current-password" style={{ border: '1px solid var(--border-color)', borderRadius: '14px', padding: '16px 54px 16px 18px', fontSize: '0.96rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)', width: '100%', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)', transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease' }} />
+                      <button type="button" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? 'Hide password' : 'Show password'} style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
                   </label>
 
-                  <button type="submit" disabled={isLoading} style={{ background: isLoading ? '#475569' : '#44516b', color: '#f8fafc', border: 'none', borderRadius: '16px', padding: '16px 18px', fontSize: '1rem', fontWeight: 700, cursor: isLoading ? 'not-allowed' : 'pointer', marginTop: '6px' }}>
+                  <button type="submit" disabled={isLoading} style={{ background: isLoading ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '16px', padding: '16px 18px', fontSize: '1rem', fontWeight: 700, cursor: isLoading ? 'not-allowed' : 'pointer', marginTop: '6px', transition: 'background-color 0.3s ease, color 0.3s ease' }}>
                     {isLoading ? 'Signing in...' : 'Sign in'}
                   </button>
                 </div>
               </form>
 
-              <div style={{ marginTop: '22px', textAlign: 'center', color: '#94a3b8', fontSize: '0.95rem' }}>
+              <div style={{ marginTop: '22px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
                 Don't have an account?{' '}
                 <button
                   type="button"
@@ -523,20 +526,20 @@ export default function LoginPage() {
                     setRequestError('');
                     setRequestSuccess('');
                   }}
-                  style={{ background: 'transparent', border: 'none', color: '#4ade80', cursor: 'pointer', fontWeight: 700, padding: 0 }}
+                  style={{ background: 'transparent', border: 'none', color: '#10b981', cursor: 'pointer', fontWeight: 700, padding: 0 }}
                 >
                   Send request
                 </button>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '28px 0 22px' }}>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(148, 163, 184, 0.16)' }} />
-                <span style={{ color: '#94a3b8', fontSize: '0.92rem' }}>or continue with</span>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(148, 163, 184, 0.16)' }} />
+                <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.92rem' }}>or continue with</span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <button type="button" onClick={handleGoogleLogin} style={{ width: '58px', height: '58px', borderRadius: '50%', border: '1px solid rgba(148, 163, 184, 0.18)', background: '#121a2b', color: '#f8fafc', cursor: 'pointer', fontSize: '1.35rem', fontWeight: 700 }} aria-label="Continue with Google" title="Continue with Google">
+                <button type="button" onClick={handleGoogleLogin} style={{ width: '58px', height: '58px', borderRadius: '50%', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '1.35rem', fontWeight: 700, transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease' }} aria-label="Continue with Google" title="Continue with Google">
                   G
                 </button>
               </div>
@@ -547,14 +550,14 @@ export default function LoginPage() {
                 </p>
               )}
 
-              <div style={{ marginTop: '28px', padding: '18px', borderRadius: '20px', background: 'rgba(15, 23, 42, 0.62)', border: '1px solid rgba(148, 163, 184, 0.14)' }}>
+              <div style={{ marginTop: '28px', padding: '18px', borderRadius: '20px', background: 'var(--bg-alt)', border: '1px solid var(--border-color)', transition: 'background-color 0.3s ease, border-color 0.3s ease' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '14px' }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f8fafc', fontWeight: 700, marginBottom: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontWeight: 700, marginBottom: '6px' }}>
                       <UserPlus size={18} />
                       Campus Account Request
                     </div>
-                    <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.7 }}>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.7 }}>
                       New users from every role can request access here, create their own password, and optionally add a separate Google sign-in email.
                     </p>
                   </div>
@@ -565,7 +568,7 @@ export default function LoginPage() {
                       setRequestError('');
                       setRequestSuccess('');
                     }}
-                    style={{ background: showRequestForm ? '#1d4ed8' : 'rgba(30, 41, 59, 0.96)', color: '#f8fafc', border: '1px solid rgba(148, 163, 184, 0.16)', borderRadius: '12px', padding: '10px 14px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    style={{ background: showRequestForm ? 'var(--accent)' : 'var(--bg-card)', color: showRequestForm ? 'var(--accent-text)' : 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '10px 14px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease' }}
                   >
                     {showRequestForm ? 'Hide Form' : 'Open Form'}
                   </button>
@@ -586,14 +589,14 @@ export default function LoginPage() {
                         </div>
                       )}
 
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#cbd5e1', fontWeight: 600 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                         Full Name
-                        <input name="fullName" value={requestForm.fullName} onChange={handleRequestInputChange} placeholder="Enter your full name" style={{ border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: '#121a2b', color: '#f8fafc' }} />
+                        <input name="fullName" value={requestForm.fullName} onChange={handleRequestInputChange} placeholder="Enter your full name" style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)', transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease' }} />
                       </label>
 
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#cbd5e1', fontWeight: 600 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                         Account Role
-                        <select name="requestedRole" value={requestForm.requestedRole} onChange={handleRequestInputChange} style={{ border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: '#121a2b', color: '#f8fafc' }}>
+                        <select name="requestedRole" value={requestForm.requestedRole} onChange={handleRequestInputChange} style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)', transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease' }}>
                           {ROLE_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>
                               {option.label}
@@ -602,48 +605,48 @@ export default function LoginPage() {
                         </select>
                       </label>
 
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#cbd5e1', fontWeight: 600 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                         Campus Email
-                        <input name="email" type="email" value={requestForm.email} onChange={handleRequestInputChange} placeholder={`e.g. ${selectedRoleConfig.exampleEmail}`} style={{ border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: '#121a2b', color: '#f8fafc' }} />
-                        <span style={{ color: '#64748b', fontSize: '0.78rem', fontWeight: 500, lineHeight: 1.6 }}>
+                        <input name="email" type="email" value={requestForm.email} onChange={handleRequestInputChange} placeholder={`e.g. ${selectedRoleConfig.exampleEmail}`} style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)', transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease' }} />
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: 500, lineHeight: 1.6 }}>
                           Use the campus format for your role: `{selectedRoleConfig.prefix}########@my.cu.lk`.
                         </span>
                       </label>
 
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#cbd5e1', fontWeight: 600 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                         Google Sign-In Email (Optional)
-                        <input name="googleEmail" type="email" value={requestForm.googleEmail} onChange={handleRequestInputChange} placeholder="e.g. yourname@gmail.com" style={{ border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: '#121a2b', color: '#f8fafc' }} />
-                        <span style={{ color: '#64748b', fontSize: '0.78rem', fontWeight: 500, lineHeight: 1.6 }}>
+                        <input name="googleEmail" type="email" value={requestForm.googleEmail} onChange={handleRequestInputChange} placeholder="e.g. yourname@gmail.com" style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)', transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease' }} />
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: 500, lineHeight: 1.6 }}>
                           Add this if you plan to sign in with a personal Google account instead of your university email.
                         </span>
                       </label>
 
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#cbd5e1', fontWeight: 600 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                         Create Password
-                        <input name="password" type="password" value={requestForm.password} onChange={handleRequestInputChange} placeholder="At least 8 characters" style={{ border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: '#121a2b', color: '#f8fafc' }} />
+                        <input name="password" type="password" value={requestForm.password} onChange={handleRequestInputChange} placeholder="At least 8 characters" style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)', transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease' }} />
                       </label>
 
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#cbd5e1', fontWeight: 600 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                         Confirm Password
-                        <input name="confirmPassword" type="password" value={requestForm.confirmPassword} onChange={handleRequestInputChange} placeholder="Re-enter your password" style={{ border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: '#121a2b', color: '#f8fafc' }} />
+                        <input name="confirmPassword" type="password" value={requestForm.confirmPassword} onChange={handleRequestInputChange} placeholder="Re-enter your password" style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)', transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease' }} />
                       </label>
 
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#cbd5e1', fontWeight: 600 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                         Campus ID
-                        <input name="studentId" value={requestForm.studentId} onChange={handleRequestInputChange} placeholder={`e.g. ${selectedRoleConfig.exampleId}`} style={{ border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: '#121a2b', color: '#f8fafc' }} />
+                        <input name="studentId" value={requestForm.studentId} onChange={handleRequestInputChange} placeholder={`e.g. ${selectedRoleConfig.exampleId}`} style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)', transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease' }} />
                       </label>
 
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#cbd5e1', fontWeight: 600 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                         Faculty / Unit
-                        <input name="faculty" value={requestForm.faculty} onChange={handleRequestInputChange} placeholder="e.g. Computing, Operations, Maintenance" style={{ border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: '#121a2b', color: '#f8fafc' }} />
+                        <input name="faculty" value={requestForm.faculty} onChange={handleRequestInputChange} placeholder="e.g. Computing, Operations, Maintenance" style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)', transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease' }} />
                       </label>
 
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#cbd5e1', fontWeight: 600 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>
                         Note (Optional)
-                        <textarea name="note" value={requestForm.note} onChange={handleRequestInputChange} placeholder="Add any details the admin team should know" rows={3} style={{ border: '1px solid rgba(148, 163, 184, 0.18)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: '#121a2b', color: '#f8fafc', resize: 'vertical', fontFamily: 'inherit' }} />
+                        <textarea name="note" value={requestForm.note} onChange={handleRequestInputChange} placeholder="Add any details the admin team should know" rows={3} style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '13px 16px', fontSize: '0.95rem', outline: 'none', background: 'var(--bg-card)', color: 'var(--text-primary)', resize: 'vertical', fontFamily: 'inherit', transition: 'background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease' }} />
                       </label>
 
-                      <button type="submit" disabled={isRequestLoading} style={{ background: isRequestLoading ? '#334155' : '#2563eb', color: '#ffffff', border: 'none', borderRadius: '12px', padding: '13px 18px', fontSize: '0.95rem', fontWeight: 700, cursor: isRequestLoading ? 'not-allowed' : 'pointer' }}>
+                      <button type="submit" disabled={isRequestLoading} style={{ background: isRequestLoading ? 'var(--text-muted)' : 'var(--accent)', color: 'var(--accent-text)', border: 'none', borderRadius: '12px', padding: '13px 18px', fontSize: '0.95rem', fontWeight: 700, cursor: isRequestLoading ? 'not-allowed' : 'pointer', transition: 'background-color 0.3s ease, color 0.3s ease' }}>
                         {isRequestLoading ? 'Sending Request...' : 'Send Request to Create Account'}
                       </button>
                     </div>

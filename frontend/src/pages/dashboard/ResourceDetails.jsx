@@ -7,7 +7,22 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8089';
+const API_BASE = (import.meta.env.VITE_API_BASE?.replace(/\/$/, '')) || 'http://localhost:8089';
+
+const getImageUrl = (url, type, name) => {
+  if (!url) {
+    const n = name?.toLowerCase() || '';
+    if (type === 'TRANSPORTATION') return 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=800';
+    if (n.includes('basketball')) return 'https://images.unsplash.com/photo-1519861531473-9200262188bf?auto=format&fit=crop&q=80&w=800';
+    if (n.includes('volleyball')) return 'https://images.unsplash.com/photo-1592656094267-764a45159577?auto=format&fit=crop&q=80&w=800';
+    if (n.includes('carrom')) return 'https://images.unsplash.com/photo-1577748651212-32abb372993d?auto=format&fit=crop&q=80&w=800';
+    if (n.includes('chess')) return 'https://images.unsplash.com/photo-1528819622765-d6bcf132f793?auto=format&fit=crop&q=80&w=800';
+    if (n.includes('badminton')) return 'https://images.unsplash.com/photo-1521537634581-0dced2fee2ef?auto=format&fit=crop&q=80&w=800';
+    return 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800';
+  }
+  if (url.startsWith('http')) return url;
+  return `${API_BASE}${url}`;
+};
 
 export default function ResourceDetails() {
   const { id } = useParams();
@@ -104,9 +119,13 @@ export default function ResourceDetails() {
 
       <div style={{ position: 'relative', borderRadius: '24px', overflow: 'hidden', height: '400px', boxShadow: '0 20px 50px rgba(0,0,0,0.1)' }}>
         <img
-          src={resource.imageUrl}
+          src={getImageUrl(resource.imageUrl, resource.type, resource.name)}
           alt={resource.name}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = getImageUrl(null, resource.type, resource.name);
+          }}
         />
         <div style={{
           position: 'absolute',

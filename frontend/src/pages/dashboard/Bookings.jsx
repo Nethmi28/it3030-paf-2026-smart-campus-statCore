@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Building, Users, Clock, FileText, AlertCircle, UploadCloud, Landmark, Monitor, Trophy, Calendar, Send, Check, Minus, Plus, ClipboardCheck } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Building, Users, Clock, FileText, AlertCircle, UploadCloud, Landmark, Monitor, Trophy, Calendar, Send, Check, Minus, Plus, ClipboardCheck, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { bookingService } from '../../services/bookingService';
@@ -44,6 +44,7 @@ const toMinutes = (timeString) => {
 
 export function StudentBookingsView() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { showToast, showConfirm } = useToast();
 
@@ -501,14 +502,14 @@ export function StudentBookingsView() {
   };
 
   const decreaseAttendees = () => {
-    const val = parseInt(formData.expectedAttendees || '5');
+    const val = parseInt(formData.expectedAttendees) || 1;
     if (val > 1) {
       setFormData(prev => ({ ...prev, expectedAttendees: String(val - 1) }));
     }
   };
 
   const increaseAttendees = () => {
-    const val = parseInt(formData.expectedAttendees || '5');
+    const val = parseInt(formData.expectedAttendees) || 1;
     const limit = selectedResource?.capacity ?? 100;
     if (val < limit) {
       setFormData(prev => ({ ...prev, expectedAttendees: String(val + 1) }));
@@ -636,6 +637,13 @@ export function StudentBookingsView() {
 
   return (
     <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <button 
+        onClick={() => navigate(-1)}
+        style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: '600', padding: 0, width: 'fit-content' }}
+      >
+        <ArrowLeft size={18} /> Back
+      </button>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h2 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '4px', color: 'var(--text-primary)' }}>My Bookings</h2>
@@ -1363,9 +1371,28 @@ export function StudentBookingsView() {
                       >
                         <Minus size={14} />
                       </button>
-                      <span style={{ fontSize: '1.05rem', fontWeight: '800', minWidth: '24px', textAlign: 'center', color: 'var(--text-primary)' }}>
-                        {formData.expectedAttendees}
-                      </span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        name="expectedAttendees"
+                        value={formData.expectedAttendees}
+                        onChange={handleInputChange}
+                        disabled={!selectedResource}
+                        style={{
+                          width: '54px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          background: 'var(--bg-card)',
+                          color: 'var(--text-primary)',
+                          fontSize: '1rem',
+                          fontWeight: '800',
+                          textAlign: 'center',
+                          outline: 'none',
+                          boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.06)',
+                          transition: 'border-color 0.2s, background-color 0.2s'
+                        }}
+                      />
                       <button
                         type="button"
                         onClick={increaseAttendees}
