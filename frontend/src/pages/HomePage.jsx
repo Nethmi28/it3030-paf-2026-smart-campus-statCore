@@ -2,6 +2,7 @@ import LandingNavbar from '../components/common/LandingNavbar';
 import Hero from '../components/common/Hero';
 import LandingHighlights from '../components/common/LandingHighlights';
 import TrustedBy from '../components/common/TrustedBy';
+import ContactUs from '../components/common/ContactUs';
 
 export default function HomePage() {
   return (
@@ -10,6 +11,7 @@ export default function HomePage() {
       <Hero />
       <LandingHighlights />
       <TrustedBy />
+      <ContactUs />
     </div>
   );
 }
