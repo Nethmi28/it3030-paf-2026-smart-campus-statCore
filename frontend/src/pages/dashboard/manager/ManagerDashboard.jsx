@@ -1,46 +1,60 @@
-import { Building, CalendarCheck, FileText, Settings, Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  CalendarClock, BellRing, Loader2, ArrowRight, Activity, Layers, Wrench
+} from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { bookingService } from '../../../services/bookingService';
 import { ticketService } from '../../../services/ticketService';
-import { useNavigate } from 'react-router-dom';
+import ResourceAnalysis from '../../../components/resources/ResourceAnalysis';
+import BookingAnalysis from '../../../components/resources/BookingAnalysis';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8089';
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ facilities: 0, activeBookings: 0, reports: 0, repairs: 0 });
+  const [stats, setStats] = useState({
+    totalFacilities: 0,
+    pendingBookings: 0,
+    activeTickets: 0,
+    unreadAlerts: 0
+  });
+  const [allBookings, setAllBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchManagerStats = async () => {
       if (!user?.token) return;
       setLoading(true);
+
       try {
-        const [res, bk, tk] = await Promise.all([
-          fetch(`${API_BASE}/api/resources`, { headers: { 'Authorization': `Bearer ${user.token}` } }),
+        const [resourcesResp, bookings, tickets] = await Promise.all([
+          fetch(`${API_BASE}/api/resources`, { headers: { Authorization: `Bearer ${user.token}` } }),
           bookingService.getAllBookings(user.token),
           ticketService.getMyTickets(user.token)
         ]);
 
-        const resources = await res.json();
-        const pendingBk = bk.filter(b => b.status === 'PENDING').length;
-        const openTk = tk.filter(t => t.status === 'OPEN').length;
-        const inProgTk = tk.filter(t => t.status === 'IN_PROGRESS').length;
+        const resources = await resourcesResp.json();
+        const pending = bookings.filter(b => b.status === 'PENDING').length;
+        const active = tickets.filter(t => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length;
 
         setStats({
-          facilities: resources.length,
-          activeBookings: bk.filter(b => b.status === 'APPROVED' || b.status === 'PENDING').length,
-          reports: openTk,
-          repairs: inProgTk
+          totalFacilities: resources.length,
+          pendingBookings: pending,
+          activeTickets: active,
+          unreadAlerts: 3 // Placeholder for demo
         });
+
+        setAllBookings(bookings);
+
       } catch (err) {
-        console.error("Manager dashboard stats error:", err);
+        console.error('Manager dashboard stats error:', err);
       } finally {
         setLoading(false);
       }
     };
+
     fetchManagerStats();
   }, [user?.token]);
 
@@ -48,72 +62,153 @@ export default function ManagerDashboard() {
     return (
       <div style={{ padding: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
         <Loader2 size={40} className="animate-spin" style={{ color: '#3b82f6' }} />
-        <p style={{ color: '#64748b' }}>Loading Manager Console...</p>
+        <p style={{ color: 'var(--text-muted)' }}>Initialising Management Console...</p>
       </div>
     );
   }
 
-  const statsDisplay = [
-    { title: 'Total Facilities', value: stats.facilities, icon: <Building size={24} />, color: '#3b82f6' },
-    { title: 'Active Bookings', value: stats.activeBookings, icon: <CalendarCheck size={24} />, color: '#10b981' },
-    { title: 'Pending Reports', value: stats.reports, icon: <FileText size={24} />, color: '#f59e0b' },
-    { title: 'Maintenance', value: stats.repairs, icon: <Settings size={24} />, color: '#6366f1' },
+  const primaryCards = [
+    {
+      title: 'Facilities Inventory',
+      value: stats.totalFacilities,
+      label: 'Managed Assets',
+      icon: <Layers size={22} />,
+      color: '#3b82f6',
+      path: '/dashboard/manager/manage-resources'
+    },
+    {
+      title: 'Pending Reservations',
+      value: stats.pendingBookings,
+      label: 'Awaiting Review',
+      icon: <CalendarClock size={22} />,
+      color: '#10b981',
+      path: '/dashboard/bookings'
+    },
+    {
+      title: 'Active Operations',
+      value: stats.activeTickets,
+      label: 'Incidents & Repairs',
+      icon: <Wrench size={22} />,
+      color: '#f59e0b',
+      path: '/dashboard/tickets'
+    },
+    {
+      title: 'System Alerts',
+      value: stats.unreadAlerts,
+      label: 'New Notifications',
+      icon: <BellRing size={22} />,
+      color: '#6366f1',
+      path: '/dashboard/notifications'
+    },
   ];
 
+  const surfaceStyle = {
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '24px',
+    padding: '24px',
+    boxShadow: 'var(--shadow-sm)',
+    position: 'relative',
+    overflow: 'hidden'
+  };
+
+
   return (
-    <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '32px' }}>
-        <h2 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px' }}>Operations & Management</h2>
-        <p style={{ color: '#64748b' }}>Oversee facility usage, resource allocation, and operational efficiency.</p>
+    <div style={{ padding: '32px', maxWidth: '1600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '56px' }}>
+
+      {/* Dashboard Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--accent)', fontWeight: '700', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '12px' }}>
+            <Activity size={16} />
+            Operations Overview
+          </div>
+          <h2 style={{ fontSize: '2.75rem', fontWeight: '900', color: 'var(--text-primary)', letterSpacing: '-0.03em', lineHeight: 1.1 }}>Manager Console</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '1.15rem', marginTop: '8px' }}>Performance metrics and administrative control centre.</p>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-        {statsDisplay.map((stat, i) => (
-          <div key={i} style={{ background: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ background: `${stat.color}15`, padding: '16px', borderRadius: '12px', color: stat.color }}>
-              {stat.icon}
+      {/* Main Area Cards - Restructured for Sidebar Coverage */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+        {primaryCards.map((stat) => (
+          <div
+            key={stat.title}
+            onClick={() => navigate(stat.path)}
+            style={{
+              ...surfaceStyle,
+              cursor: 'pointer',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              background: 'linear-gradient(145deg, var(--bg-card) 0%, var(--bg-alt) 100%)'
+            }}
+            className="hover-lift hover-glow"
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div style={{ background: `${stat.color}15`, padding: '12px', borderRadius: '14px', color: stat.color }}>
+                {stat.icon}
+              </div>
+              <ArrowRight size={18} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
             </div>
+
             <div>
-              <div style={{ color: '#64748b', fontSize: '0.875rem', fontWeight: '500', marginBottom: '4px' }}>{stat.title}</div>
-              <div style={{ color: '#0f172a', fontSize: '1.5rem', fontWeight: 'bold' }}>{stat.value}</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                {stat.title}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                <div style={{ color: 'var(--text-primary)', fontSize: '2.25rem', fontWeight: '800' }}>{stat.value}</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>{stat.label}</div>
+              </div>
+            </div>
+
+            {/* Subtle progress bar or accent */}
+            <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '4px', background: `${stat.color}30` }}>
+              <div style={{ height: '100%', width: '40%', background: stat.color, borderRadius: '0 2px 2px 0' }}></div>
             </div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
-        <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#0f172a', marginBottom: '16px' }}>Weekly facility usage</h3>
-          <div style={{ height: '240px', display: 'flex', alignItems: 'flex-end', gap: '12px', borderBottom: '1px solid #e2e8f0', paddingTop: '40px' }}>
-            {/* Simple CSS Bar Chart Placeholder */}
-            {[40, 60, 55, 80, 70, 95, 50].map((h, i) => (
-              <div key={i} style={{ flex: 1, background: '#3b82f6', height: `${h}%`, borderRadius: '6px 6px 0 0', opacity: 0.8, transition: 'all 0.3s' }}></div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.75rem', color: '#64748b' }}>
-            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-          </div>
+      {/* Resource Analysis Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingLeft: '8px' }}>
+          <div style={{ width: '4px', height: '24px', background: 'var(--accent)', borderRadius: '2px' }}></div>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-0.01em' }}>Infrastructure Insights</h3>
         </div>
-
-        <div style={{ background: 'white', borderRadius: '16px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#0f172a', marginBottom: '16px' }}>Quick Actions</h3>
-           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-             <button 
-               onClick={() => navigate('/dashboard/bookings')}
-               style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#334155', fontWeight: '500', textAlign: 'left', cursor: 'pointer' }}
-             >
-               Review Pending Bookings
-             </button>
-             <button style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#334155', fontWeight: '500', textAlign: 'left', cursor: 'pointer' }}>Generate Usage Report</button>
-             <button 
-               onClick={() => navigate('/dashboard/resources')}
-               style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#334155', fontWeight: '500', textAlign: 'left', cursor: 'pointer' }}
-             >
-               Manage Facilities
-             </button>
-           </div>
+        <div className="glass-card" style={{ padding: '4px', borderRadius: '32px' }}>
+          <ResourceAnalysis />
         </div>
       </div>
+
+      {/* Utilization Analytics Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingLeft: '8px' }}>
+          <div style={{ width: '4px', height: '24px', background: '#6366f1', borderRadius: '2px' }}></div>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-0.01em' }}>Utilization Analytics</h3>
+        </div>
+        <BookingAnalysis bookings={allBookings} />
+      </div>
+
+
+      <style>{`
+        .hover-lift:hover {
+          transform: translateY(-8px);
+        }
+        .hover-glow:hover {
+          box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+          border-color: var(--accent) !important;
+        }
+        .btn-primary {
+          background: var(--accent);
+          color: white;
+          border: none;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .btn-primary:hover {
+          opacity: 0.9;
+          transform: translateY(-2px);
+        }
+      `}</style>
     </div>
   );
 }

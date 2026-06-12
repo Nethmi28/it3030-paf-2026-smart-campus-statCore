@@ -1,8 +1,38 @@
-import { MapPin, Users, Wifi, Tv, Monitor, Laptop } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { MapPin, Users, Wifi, Tv, Monitor, Laptop, ArrowRight } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+
+const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8089';
 
 const ResourceCard = ({ resource }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const getImageUrl = (url) => {
+    if (!url) {
+      const name = resource.name.toLowerCase();
+      if (resource.type === 'TRANSPORTATION') {
+        return 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=800';
+      }
+      if (name.includes('basketball')) {
+        return 'https://images.unsplash.com/photo-1519861531473-9200262188bf?auto=format&fit=crop&q=80&w=800';
+      }
+      if (name.includes('volleyball')) {
+        return 'https://images.unsplash.com/photo-1592656094267-764a45159577?auto=format&fit=crop&q=80&w=800';
+      }
+      if (name.includes('carrom')) {
+        return 'https://images.unsplash.com/photo-1577748651212-32abb372993d?auto=format&fit=crop&q=80&w=800';
+      }
+      if (name.includes('chess')) {
+        return 'https://images.unsplash.com/photo-1528819622765-d6bcf132f793?auto=format&fit=crop&q=80&w=800';
+      }
+      if (name.includes('badminton')) {
+        return 'https://images.unsplash.com/photo-1521537634581-0dced2fee2ef?auto=format&fit=crop&q=80&w=800';
+      }
+      return 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800';
+    }
+    if (url.startsWith('http')) return url;
+    return `${API_BASE}${url}`;
+  };
 
   const getStatusColor = (status) => {
     return status === 'Available' ? '#10b981' : '#ef4444';
@@ -17,141 +47,176 @@ const ResourceCard = ({ resource }) => {
 
   return (
     <div 
+      className="premium-shadow hover-glow"
       style={{
         background: 'var(--bg-card)',
-        borderRadius: '16px',
+        borderRadius: '24px',
         overflow: 'hidden',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
         border: '1px solid var(--border-color)',
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
+        position: 'relative'
       }}
-      onClick={() => navigate(`/dashboard/resources/${resource.id}`)}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.12)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.06)';
-      }}
+    onClick={() => {
+      const path = location.pathname.startsWith('/dashboard') 
+        ? `/dashboard/resources/${resource.id}` 
+        : `/resources/${resource.id}`;
+      navigate(path);
+    }}
     >
-      <div style={{ position: 'relative', height: '180px' }}>
+      {/* Image Section */}
+      <div style={{ position: 'relative', height: '220px', overflow: 'hidden' }}>
         <img 
-          src={resource.imageUrl} 
+          src={getImageUrl(resource.imageUrl)} 
           alt={resource.name}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          style={{ 
+            width: '100%', 
+            height: '100%', 
+            objectFit: 'cover',
+            transition: 'transform 0.6s ease'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = getImageUrl(null);
+          }}
         />
+        
+        {/* Status Badge - Premium Refined */}
         <div style={{
           position: 'absolute',
-          top: '12px',
-          right: '12px',
-          padding: '4px 12px',
-          borderRadius: '20px',
-          fontSize: '0.75rem',
-          fontWeight: '600',
-          background: 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(4px)',
-          color: getStatusColor(resource.status),
+          top: '16px',
+          right: '16px',
+          padding: '8px 16px',
+          borderRadius: '99px',
+          background: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
           display: 'flex',
           alignItems: 'center',
-          gap: '4px',
-          border: `1px solid ${getStatusColor(resource.status)}`
+          gap: '8px',
+          boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+          zIndex: 5
         }}>
           <span style={{ 
-            width: '6px', 
-            height: '6px', 
+            width: '10px', 
+            height: '10px', 
             borderRadius: '50%', 
-            background: getStatusColor(resource.status) 
+            background: getStatusColor(resource.status),
+            boxShadow: `0 0 12px ${getStatusColor(resource.status)}`,
+            animation: resource.status === 'Available' ? 'statusPulse 2s infinite' : 'none'
           }}></span>
-          {resource.status}
+          <span style={{ 
+            fontSize: '0.7rem', 
+            fontWeight: '800', 
+            color: 'white', 
+            textTransform: 'uppercase', 
+            letterSpacing: '0.06em' 
+          }}>
+            {resource.status}
+          </span>
         </div>
+
+        <style>{`
+          @keyframes statusPulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+          }
+        `}</style>
+
+        {/* Type Badge */}
         <div style={{
            position: 'absolute',
-           top: '12px',
-           left: '12px',
-           padding: '4px 10px',
-           borderRadius: '6px',
+           bottom: '16px',
+           left: '16px',
+           padding: '6px 12px',
+           borderRadius: '8px',
            fontSize: '0.7rem',
-           fontWeight: '700',
-           background: 'rgba(17, 24, 39, 0.8)',
+           fontWeight: '800',
+           background: 'rgba(15, 23, 42, 0.8)',
+           backdropFilter: 'blur(8px)',
            color: 'white',
            textTransform: 'uppercase',
-           letterSpacing: '0.5px'
+           letterSpacing: '0.05em'
         }}>
           {resource.type}
         </div>
       </div>
 
-      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', flexGrow: 1 }}>
+      {/* Content Section */}
+      <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', flexGrow: 1 }}>
         <div>
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
+          <h3 style={{ 
+            fontSize: '1.4rem', 
+            fontWeight: '800', 
+            color: 'var(--text-primary)', 
+            marginBottom: '6px',
+            letterSpacing: '-0.01em'
+          }}>
             {resource.name}
           </h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '500' }}>
             <MapPin size={16} />
             <span>{resource.location}</span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Users size={18} />
-            <span>Capacity: {resource.capacity}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-alt)', padding: '6px 12px', borderRadius: '10px', fontWeight: '600' }}>
+            <Users size={18} style={{ color: 'var(--accent)' }} />
+            <span>{resource.capacity} Seats</span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {resource.amenities.slice(0, 3).map((amenity, index) => (
             <span key={index} style={{
-              padding: '4px 10px',
-              borderRadius: '6px',
+              padding: '6px 12px',
+              borderRadius: '8px',
               fontSize: '0.75rem',
+              fontWeight: '600',
               background: 'var(--bg-alt)',
-              color: 'var(--text-secondary)',
+              color: 'var(--text-muted)',
+              border: '1px solid var(--border-color)',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '6px'
             }}>
               {amenityIcons[amenity] || null}
               {amenity}
             </span>
           ))}
-          {resource.amenities.length > 3 && (
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', alignSelf: 'center' }}>
-              +{resource.amenities.length - 3}
-            </span>
-          )}
         </div>
 
-        <button 
-          style={{
-            marginTop: 'auto',
-            width: '100%',
-            padding: '12px',
-            borderRadius: '10px',
-            border: 'none',
-            background: 'var(--accent)',
-            color: 'white',
-            fontWeight: '600',
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            transition: 'background 0.2s ease',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center'
+        <div style={{ 
+          marginTop: 'auto', 
+          paddingTop: '16px',
+          borderTop: '1px solid var(--border-color)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--accent)' }}>View Details</span>
+          <div style={{ 
+            width: '32px', 
+            height: '32px', 
+            borderRadius: '50%', 
+            background: 'var(--accent)', 
+            color: 'white', 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            transition: 'transform 0.3s ease'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/dashboard/resources/${resource.id}`);
-          }}
-        >
-          View Details
-        </button>
+          className="arrow-container"
+          >
+            <ArrowRight size={18} />
+          </div>
+        </div>
       </div>
     </div>
   );

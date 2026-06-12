@@ -1,33 +1,51 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, MapPin, Users, Wifi, Tv, Monitor, 
-  Laptop, Calendar, CheckCircle2, Clock, Info, Loader2, AlertCircle
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import {
+  ArrowLeft, MapPin, Users, Wifi, Tv, Monitor,
+  Laptop, Calendar, CheckCircle2, Clock, Info, Loader2, AlertCircle,
+  Lock, UserCircle, X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8089';
+const API_BASE = (import.meta.env.VITE_API_BASE?.replace(/\/$/, '')) || 'http://localhost:8089';
+
+const getImageUrl = (url, type, name) => {
+  if (!url) {
+    const n = name?.toLowerCase() || '';
+    if (type === 'TRANSPORTATION') return 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=800';
+    if (n.includes('basketball')) return 'https://images.unsplash.com/photo-1519861531473-9200262188bf?auto=format&fit=crop&q=80&w=800';
+    if (n.includes('volleyball')) return 'https://images.unsplash.com/photo-1592656094267-764a45159577?auto=format&fit=crop&q=80&w=800';
+    if (n.includes('carrom')) return 'https://images.unsplash.com/photo-1577748651212-32abb372993d?auto=format&fit=crop&q=80&w=800';
+    if (n.includes('chess')) return 'https://images.unsplash.com/photo-1528819622765-d6bcf132f793?auto=format&fit=crop&q=80&w=800';
+    if (n.includes('badminton')) return 'https://images.unsplash.com/photo-1521537634581-0dced2fee2ef?auto=format&fit=crop&q=80&w=800';
+    return 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800';
+  }
+  if (url.startsWith('http')) return url;
+  return `${API_BASE}${url}`;
+};
 
 export default function ResourceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
-  
+
   const [resource, setResource] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
     const fetchResource = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${API_BASE}/api/resources/${id}`, {
-          headers: {
-            'Authorization': `Bearer ${user?.token}`,
-            'Accept': 'application/json'
-          }
-        });
+        const headers = { 'Accept': 'application/json' };
+        if (user?.token) {
+          headers['Authorization'] = `Bearer ${user.token}`;
+        }
+
+        const response = await fetch(`${API_BASE}/api/resources/${id}`, { headers });
 
         if (!response.ok) throw new Error('Resource not found');
         const data = await response.json();
@@ -39,7 +57,7 @@ export default function ResourceDetails() {
       }
     };
 
-    if (id && user?.token) {
+    if (id) {
       fetchResource();
     }
   }, [id, user?.token]);
@@ -67,8 +85,8 @@ export default function ResourceDetails() {
         <AlertCircle size={64} style={{ color: '#ef4444' }} />
         <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Error Loading Resource</h2>
         <p style={{ color: 'var(--text-muted)', textAlign: 'center' }}>{error || 'The resource could not be found.'}</p>
-        <button 
-          onClick={() => navigate('/dashboard/resources')}
+        <button
+          onClick={() => navigate(location.pathname.startsWith('/dashboard') ? '/dashboard/resources' : '/resources')}
           style={{ padding: '12px 24px', borderRadius: '10px', background: 'var(--accent)', color: 'white', border: 'none', fontWeight: '600', cursor: 'pointer' }}
         >
           Go Back to Resources
@@ -79,7 +97,7 @@ export default function ResourceDetails() {
 
   return (
     <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <button 
+      <button
         onClick={() => navigate(-1)}
         style={{
           display: 'flex',
@@ -100,10 +118,14 @@ export default function ResourceDetails() {
       </button>
 
       <div style={{ position: 'relative', borderRadius: '24px', overflow: 'hidden', height: '400px', boxShadow: '0 20px 50px rgba(0,0,0,0.1)' }}>
-        <img 
-          src={resource.imageUrl} 
+        <img
+          src={getImageUrl(resource.imageUrl, resource.type, resource.name)}
           alt={resource.name}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = getImageUrl(null, resource.type, resource.name);
+          }}
         />
         <div style={{
           position: 'absolute',
@@ -118,10 +140,10 @@ export default function ResourceDetails() {
           gap: '8px'
         }}>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span style={{ 
-              background: 'rgba(255,255,255,0.2)', 
-              backdropFilter: 'blur(8px)', 
-              padding: '4px 12px', 
+            <span style={{
+              background: 'rgba(255,255,255,0.2)',
+              backdropFilter: 'blur(8px)',
+              padding: '4px 12px',
               borderRadius: '6px',
               fontSize: '0.75rem',
               fontWeight: '700',
@@ -176,22 +198,22 @@ export default function ResourceDetails() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div style={{ 
-            background: 'var(--bg-card)', 
-            padding: '32px', 
-            borderRadius: '24px', 
+          <div style={{
+            background: 'var(--bg-card)',
+            padding: '32px',
+            borderRadius: '24px',
             border: '1px solid var(--border-color)',
             boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
             position: 'sticky',
             top: '32px'
           }}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '24px' }}>Quick Info</h3>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Status</span>
-                <span style={{ 
-                  color: resource.status === 'Available' ? '#10b981' : '#ef4444', 
+                <span style={{
+                  color: resource.status === 'Available' ? '#10b981' : '#ef4444',
                   fontWeight: '700',
                   display: 'flex',
                   alignItems: 'center',
@@ -229,9 +251,15 @@ export default function ResourceDetails() {
               gap: '10px',
               transition: 'transform 0.2s ease'
             }}
-            onClick={() => navigate('/dashboard/bookings', { state: { selectedResourceId: resource.id, action: 'create' } })}
-            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              onClick={() => {
+                if (!user) {
+                  setShowAuthModal(true);
+                  return;
+                }
+                navigate('/dashboard/bookings', { state: { selectedResourceId: resource.id, action: 'create' } });
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
             >
               <Calendar size={20} />
               Book This Resource
@@ -243,6 +271,109 @@ export default function ResourceDetails() {
           </div>
         </div>
       </div>
+
+      {/* Modern Auth Modal */}
+      {showAuthModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.4)',
+          backdropFilter: 'blur(12px)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px'
+        }}>
+          <div
+            className="glass-card premium-shadow animate-float"
+            style={{
+              width: '100%',
+              maxWidth: '440px',
+              borderRadius: '32px',
+              padding: '40px',
+              textAlign: 'center',
+              position: 'relative',
+              animation: 'none' // Disable float for modal to keep it stable
+            }}
+          >
+            <button
+              onClick={() => setShowAuthModal(false)}
+              style={{
+                position: 'absolute',
+                top: '24px',
+                right: '24px',
+                background: 'rgba(255,255,255,0.1)',
+                border: 'none',
+                padding: '8px',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                color: 'var(--text-primary)'
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 24px'
+            }}>
+              <Lock size={36} />
+            </div>
+
+            <h3 style={{ fontSize: '1.75rem', fontWeight: '800', marginBottom: '12px', letterSpacing: '-0.02em' }}>
+              Booking Shield
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '32px', fontSize: '1.05rem' }}>
+              To ensure all campus resources are managed fairly, we require a verified student or staff account for bookings.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button
+                onClick={() => navigate('/login', { state: { from: location } })}
+                style={{
+                  padding: '16px',
+                  borderRadius: '16px',
+                  border: 'none',
+                  background: 'var(--accent)',
+                  color: 'var(--accent-text)',
+                  fontWeight: '700',
+                  fontSize: '1rem',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s'
+                }}
+              >
+                Login to Continue
+              </button>
+              <button
+                onClick={() => setShowAuthModal(false)}
+                style={{
+                  padding: '16px',
+                  borderRadius: '16px',
+                  border: '1px solid var(--border-color)',
+                  background: 'transparent',
+                  color: 'var(--text-primary)',
+                  fontWeight: '600',
+                  fontSize: '1rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

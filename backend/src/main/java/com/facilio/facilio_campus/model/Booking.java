@@ -49,6 +49,18 @@ public class Booking {
     @Column(name = "admin_reason", columnDefinition = "TEXT")
     private String adminReason;
 
+    @Column(name = "check_in_token")
+    private String checkInToken;
+
+    @Column(name = "checked_in", nullable = false)
+    private Boolean checkedIn = false;
+
+    @Column(name = "checked_in_at")
+    private LocalDateTime checkedInAt;
+
+    @Column(name = "checked_in_by")
+    private String checkedInBy;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -61,6 +73,9 @@ public class Booking {
         this.updatedAt = LocalDateTime.now();
         if (this.status == null) {
             this.status = BookingStatus.PENDING;
+        }
+        if (this.checkedIn == null) {
+            this.checkedIn = false;
         }
     }
 
@@ -105,6 +120,18 @@ public class Booking {
 
     public String getAdminReason() { return adminReason; }
     public void setAdminReason(String adminReason) { this.adminReason = adminReason; }
+
+    public String getCheckInToken() { return checkInToken; }
+    public void setCheckInToken(String checkInToken) { this.checkInToken = checkInToken; }
+
+    public Boolean getCheckedIn() { return checkedIn; }
+    public void setCheckedIn(Boolean checkedIn) { this.checkedIn = checkedIn; }
+
+    public LocalDateTime getCheckedInAt() { return checkedInAt; }
+    public void setCheckedInAt(LocalDateTime checkedInAt) { this.checkedInAt = checkedInAt; }
+
+    public String getCheckedInBy() { return checkedInBy; }
+    public void setCheckedInBy(String checkedInBy) { this.checkedInBy = checkedInBy; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

@@ -74,6 +74,15 @@ export const bookingService = {
         return response.json();
     },
 
+    // Get booking audit logs (Admin/Manager)
+    getAuditLogs: async (token) => {
+        const response = await fetch(`${API_BASE}/api/bookings/audit`, {
+            headers: getHeaders(token)
+        });
+        if (!response.ok) throw new Error('Failed to fetch booking audit logs');
+        return response.json();
+    },
+
     // Update booking status (Admin)
     updateStatus: async (token, bookingId, statusData) => {
         const response = await fetch(`${API_BASE}/api/bookings/${bookingId}/status`, {
@@ -91,7 +100,24 @@ export const bookingService = {
             method: 'PATCH',
             headers: getHeaders(token)
         });
-        if (!response.ok) throw new Error('Failed to cancel booking');
+        if (!response.ok) {
+            const errBody = await response.text();
+            throw new Error(errBody || 'Failed to cancel booking');
+        }
+        return response.json();
+    },
+
+    // Verify booking QR check-in (Manager/Admin)
+    verifyCheckIn: async (token, bookingId, qrPayload) => {
+        const response = await fetch(`${API_BASE}/api/bookings/${bookingId}/check-in`, {
+            method: 'POST',
+            headers: getHeaders(token),
+            body: JSON.stringify({ qrPayload })
+        });
+        if (!response.ok) {
+            const errBody = await response.text();
+            throw new Error(errBody || 'Failed to verify check-in');
+        }
         return response.json();
     }
 };

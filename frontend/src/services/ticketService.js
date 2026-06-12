@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8089/api/tickets';
+const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, '') || 'http://localhost:8089';
+const API_URL = `${API_BASE}/api/tickets`;
 
 const getAuthConfig = () => {
     const token = localStorage.getItem('token');
