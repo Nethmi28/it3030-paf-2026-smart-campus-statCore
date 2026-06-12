@@ -105,7 +105,7 @@ export default function ContactUs() {
               </div>
               <div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>Call support desk</div>
-                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--landing-title)' }}>+1 (555) 234-5678</div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--landing-title)' }}>011-2584598</div>
               </div>
             </div>
 
@@ -124,7 +124,7 @@ export default function ContactUs() {
               </div>
               <div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-muted)' }}>Campus Head Office</div>
-                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--landing-title)' }}>Building 07, Innovation Hub, West Campus</div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--landing-title)' }}>New Building , 7 th floor, Innovation center </div>
               </div>
             </div>
           </div>
@@ -313,7 +313,7 @@ export default function ContactUs() {
           </form>
         </div>
       </div>
-      
+
       {/* Dynamic CSS animations inside component */}
       <style>{`
         @keyframes spin {
